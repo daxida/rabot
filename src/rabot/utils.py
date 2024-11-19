@@ -38,7 +38,7 @@ GREEKLISH = str.maketrans(
         "x": "χ",
         "y": "υ",
         "z": "ζ",  # The Greek equivalent of 'z' is 'ζ'
-    }
+    },
 )
 
 
@@ -65,8 +65,7 @@ def greeklish_to_greek_characters(word: str) -> str:
 
 
 def fix_greek_spelling(word: str) -> str:
-    """
-    Snippet from the wordref script that requests WordReference to get
+    """Snippet from the wordref script that requests WordReference to get
     the greek accented version of a given word (which can be greeklish
     or a non-accented greek word).
 
@@ -75,8 +74,8 @@ def fix_greek_spelling(word: str) -> str:
         * fix_greek_spelling("χαρα")     => χαρά
         * fix_greek_spelling("χαρά")     => χαρά
         * fix_greek_spelling("nonsense") => nonsense
-    """
 
+    """
     greek_word_no_accents = greeklish_to_greek_characters(word)
     url = f"https://www.wordreference.com/gren/{greek_word_no_accents}"
     response = requests.get(url)
@@ -112,12 +111,11 @@ class Pagination(discord.ui.View):
     async def interaction_check(self, interaction: discord.Interaction) -> bool:
         if interaction.user == self.interaction.user:
             return True
-        else:
-            emb = discord.Embed(
-                description="Only the author of the command can perform this action.", color=16711680
-            )
-            await interaction.response.send_message(embed=emb, ephemeral=True)
-            return False
+        emb = discord.Embed(
+            description="Only the author of the command can perform this action.", color=16711680,
+        )
+        await interaction.response.send_message(embed=emb, ephemeral=True)
+        return False
 
     async def navigate(self):
         emb, self.total_pages = await self.get_page(self.index)

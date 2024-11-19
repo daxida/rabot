@@ -3,7 +3,7 @@ import urllib
 
 import discord
 
-from wordref.longest import highlight_synonyms
+from rabot.wordref.longest import highlight_synonyms
 
 TAG = "\033[35mENTRY:  \033[0m"
 EXIT = "\033[31m[EXIT]\033[0m"
@@ -86,7 +86,6 @@ class Entry:
 
     def debug(self) -> None:
         """Stringifies the entry in a debug format"""
-
         print()
         print("#" * 70)
 
@@ -137,7 +136,6 @@ class Entry:
 
         Stores it to self.embed to avoid repeated calls.
         """
-
         # self.debug()
 
         if self.gr_en:

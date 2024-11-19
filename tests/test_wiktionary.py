@@ -2,13 +2,13 @@ import asyncio
 
 import pytest
 
-from wiktionary.wiktionary import fetch_conjugation, fetch_wiktionary_pos
+from rabot.wiktionary.wiktionary import fetch_conjugation, fetch_wiktionary_pos
 
 # https://stackoverflow.com/questions/70015634/how-to-test-async-function-using-pytest
 pytest_plugins = ("pytest_asyncio",)
 
 
-@pytest.mark.asyncio()
+@pytest.mark.asyncio
 async def test_wiktionary_fetch_conjugation():
     """A simple concurrent async test.
 
@@ -42,7 +42,7 @@ async def test_wiktionary_fetch_conjugation():
             assert received is None, verb
 
 
-@pytest.mark.asyncio()
+@pytest.mark.asyncio
 async def test_wiktionary_fetch_word_greek():
     language = "greek"
     fixture_el = ["τραπέζι", "εστιατόριο"]
@@ -53,7 +53,7 @@ async def test_wiktionary_fetch_word_greek():
         assert "Ουσιαστικό" in result
 
 
-@pytest.mark.asyncio()
+@pytest.mark.asyncio
 async def test_wiktionary_fetch_word_english():
     language = "english"
     fixture_el = ["table", "restaurant"]

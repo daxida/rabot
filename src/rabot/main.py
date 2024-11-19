@@ -2,13 +2,13 @@ import discord
 from discord import app_commands
 from dotenv import dotenv_values
 
-import pronunciation.pronunciation as pronunciation
-from gr_datetime.gr_date import get_full_date
-from help.help import HelpMessage
-from utils import NotFoundError, Pagination, fix_greek_spelling
-from wiktionary.embed_message import embed_message as wiktionary_message
-from wiktionary.wiktionary import fetch_conjugation
-from wordref.wordref import Wordref
+from rabot.gr_datetime.gr_date import get_full_date
+from rabot.help.help import HelpMessage
+from rabot.pronunciation import pronunciation
+from rabot.utils import NotFoundError, Pagination, fix_greek_spelling
+from rabot.wiktionary.embed_message import embed_message as wiktionary_message
+from rabot.wiktionary.wiktionary import fetch_conjugation
+from rabot.wordref.wordref import Wordref
 
 
 class MyClient(discord.Client):

@@ -1,5 +1,5 @@
-from pronunciation.pronunciation import get_pronunciation
-from utils import NotFoundError, fix_greek_spelling
+from rabot.pronunciation.pronunciation import get_pronunciation
+from rabot.utils import NotFoundError, fix_greek_spelling
 
 
 def test_existing_pronunciation():

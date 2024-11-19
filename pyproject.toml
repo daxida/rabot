@@ -19,7 +19,7 @@ dev = [
 "Repository" = "https://github.com/daxida/rabot"
 
 [project.scripts]
-rabot = "rabot:main"
+rabot = "rabot.main:main"
 
 [tool.pytest.ini_options]
 asyncio_default_fixture_loop_scope = "function"

@@ -5,8 +5,8 @@ import requests
 from bs4 import BeautifulSoup
 from discord import Embed
 
-from utils import is_english
-from wordref.entry import Entry
+from rabot.utils import is_english
+from rabot.wordref.entry import Entry
 
 ATTRIBUTES_EL = {
     "επίθ": "adj",
@@ -38,11 +38,9 @@ OK = "\033[32m[OK]\033[0m"
 
 
 def parse_words(text: str) -> List[str]:
-    """
-    Wordref groups the words together with their attributes.
+    """Wordref groups the words together with their attributes.
     This extracts the word by deleting the attributes from a set list.
     """
-
     attributes = ATTRIBUTES_EN if is_english(text) else ATTRIBUTES_EL
 
     while True:
@@ -59,8 +57,7 @@ def parse_words(text: str) -> List[str]:
 
 
 class Wordref:
-    """
-    Deals with the scraping of Wordref.
+    """Deals with the scraping of Wordref.
 
     Everything is stored in an Entry class, where the suitability logic and formatting is done.
     """
@@ -191,8 +188,7 @@ class Wordref:
                 entry.en_synonyms.add(word)
 
     def try_fetch_sentence_pairs(self, res: Any, entry: Entry) -> None:
-        """
-        Options:
+        """Options:
         - (1) Stores every pair (even when there are
              two translations to a sentence)
         Ex.
@@ -202,7 +198,6 @@ class Wordref:
 
         - (2) Store only one pair giving priority to containing the original word.
         """
-
         gr_sentence = ""
         en_sentence = ""
         for item in res.find_all("tr", {"class": ["even", "odd"]}):
@@ -238,20 +233,17 @@ class Wordref:
                             # Our stored answer is already fine
                             if self.word and self.word in stored_greek:
                                 break
-                            else:
-                                entry.sentences.remove((stored_greek, stored_english))
-                                entry.sentences.add((gr_sentence, en_sentence))
-                                break
+                            entry.sentences.remove((stored_greek, stored_english))
+                            entry.sentences.add((gr_sentence, en_sentence))
+                            break
                     # We want our english sentences containing "word"
-                    else:
-                        if stored_greek == gr_sentence:
-                            stored_already = True
-                            # Our stored answer is already fine
-                            if self.word and self.word in stored_english:
-                                break
-                            else:
-                                entry.sentences.remove((stored_greek, stored_english))
-                                entry.sentences.add((gr_sentence, en_sentence))
-                                break
+                    elif stored_greek == gr_sentence:
+                        stored_already = True
+                        # Our stored answer is already fine
+                        if self.word and self.word in stored_english:
+                            break
+                        entry.sentences.remove((stored_greek, stored_english))
+                        entry.sentences.add((gr_sentence, en_sentence))
+                        break
                 if not stored_already:
                     entry.sentences.add((gr_sentence, en_sentence))

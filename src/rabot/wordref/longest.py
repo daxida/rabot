@@ -16,8 +16,7 @@ def lcs(a: str, b: str) -> int:
                 i += 1
             else:
                 break
-        if i - 1 > var:
-            var = i - 1
+        var = max(i - 1, var)
         a = a[i:]
 
     return var

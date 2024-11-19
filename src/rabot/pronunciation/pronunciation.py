@@ -1,7 +1,6 @@
 import io
 
-import pronunciation.forvo as forvo
-import pronunciation.wiktionary as wiktionary
+from rabot.pronunciation import forvo, wiktionary
 
 
 def get_pronunciation(word: str) -> tuple[str, io.BytesIO]:

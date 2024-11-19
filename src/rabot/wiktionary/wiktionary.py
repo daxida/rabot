@@ -1,5 +1,4 @@
-"""
-Wiktionary Parser for Greek Pages
+"""Wiktionary Parser for Greek Pages
 Example usage: fetch_wiktionary("καλημέρα", language="greek")
 Returns as a JSON containing word types and entries
 
@@ -12,7 +11,7 @@ from typing import Any
 from aiohttp import ClientSession
 from bs4 import BeautifulSoup
 
-from utils import get_language_code
+from rabot.utils import get_language_code
 
 default_language = "greek"
 logging.basicConfig(level=logging.INFO)
@@ -25,7 +24,7 @@ ENTRIES = [
     "Επιφώνημα", "Έκφραση", "Ουσιαστικό",
     "Εκφράσεις", "Επίθετο", "Επίρρημα", "Συνώνυμα", "Αντώνυμα",
     "Κλιτικός_τύπος_επιθέτου", "Κλιτικός_τύπος_ουσιαστικού",
-    "Πολυλεκτικοί_όροι", "Σημειώσεις"
+    "Πολυλεκτικοί_όροι", "Σημειώσεις",
 ]  # Μεταφράσεις, "Σύνθετα", "Συγγενικά" cut off here
 ENTRIES_EN = [
     "Etymology", "Etymology_1", "Etymology_2",
@@ -33,13 +32,13 @@ ENTRIES_EN = [
     "Interjection", "Interjection_2", "Expression",
     "Expression_2", "Expressions", "Noun", "Noun_2",
     "Adjective", "Adjective_2", "Adverb", "Adverb_2",
-    "Related", "Synonyms", "Antonyms", "Synonyms_2", "Antonyms_2"
+    "Related", "Synonyms", "Antonyms", "Synonyms_2", "Antonyms_2",
 ]
 # fmt: on
 
 
 class WiktionaryQuery:
-    __slots__ = "word", "language", "soup"
+    __slots__ = "language", "soup", "word"
 
     @classmethod
     async def create(cls, word: str, language: str, printable: bool = True):
@@ -90,11 +89,9 @@ class WiktionaryQuery:
 
 
 async def fetch_conjugation(word: str) -> dict[str, str] | None:
-    """
-    Fetch the verb conjugation table from a word.
+    """Fetch the verb conjugation table from a word.
     Retry with word variations by parsing wiktionary.
     """
-
     query = await WiktionaryQuery.create(word, default_language, printable=False)
     conjugation = await _fetch_conjugation(query)
     logger.info("Success." if conjugation else "Failure.")
@@ -174,8 +171,7 @@ def parse_suggestions(query: WiktionaryQuery) -> list[str]:
 
 
 def _parse_conjugation(query: WiktionaryQuery) -> dict[str, str] | None:
-    """
-    Parse the verb conjugation table from a word.
+    """Parse the verb conjugation table from a word.
     Return None in case of failure.
     """
     logger.info(f"Trying to fetch {query.word}...")
@@ -253,7 +249,7 @@ def _parse_conjugation_table_one(query: WiktionaryQuery) -> dict[str, str] | Non
 
     parsed: dict[str, dict[str, list[str]]] = dict()
     for idx_voice, voice_data in enumerate(table_data):
-        if not len(voice_data) % 8 == 0:
+        if len(voice_data) % 8 != 0:
             logger.warning(f"The data size is not a multiple of 8: {len(voice_data)}")
             assert False
 
@@ -277,8 +273,7 @@ def _parse_conjugation_table_one(query: WiktionaryQuery) -> dict[str, str] | Non
 
 
 def _parse_conjugation_table_two(query: WiktionaryQuery) -> dict[str, str] | None:
-    """
-    Try fetching the non-standard table structure. Cf.
+    """Try fetching the non-standard table structure. Cf.
     https://el.wiktionary.org/wiki/ξέρω?printable=yes
     https://el.wiktionary.org/wiki/είμαι?printable=yes
 

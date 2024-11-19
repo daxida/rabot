@@ -1,4 +1,4 @@
-from wordref.wordref import Wordref
+from rabot.wordref.wordref import Wordref
 
 
 def test_wordref():

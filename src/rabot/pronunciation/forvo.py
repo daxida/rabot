@@ -14,7 +14,7 @@ from urllib.error import HTTPError
 import requests
 from bs4 import BeautifulSoup
 
-from utils import NotFoundError
+from rabot.utils import NotFoundError
 
 search_url = "https://forvo.com/word/"
 download_url = "https://forvo.com/download/mp3/"
@@ -92,9 +92,8 @@ class Forvo:
             log_debug(f"[Forvo.py] HTTPError: {e}")
             if e.code == 404:
                 raise NotFoundError()
-            else:
-                # Sometimes we can get 403: Forbidden
-                raise e
+            # Sometimes we can get 403: Forbidden
+            raise e
         except Exception as e:
             log_debug("[Forvo.py] Exception: " + str(e))
             raise e
@@ -122,7 +121,7 @@ class Forvo:
 
         log_debug("[Forvo.py] Going through all pronunciations")
         for accents in lang_container.find_all(class_="pronunciations")[0].find_all(
-            class_="pronunciations-list"
+            class_="pronunciations-list",
         ):
             for pronunciation in accents.find_all("li"):
                 if len(pronunciation.find_all(class_="more")) == 0:
@@ -154,20 +153,20 @@ class Forvo:
                         pronunciation.find_all(id=re.compile(r"play_\d+"))[0].attrs["onclick"],
                     )[0]
                     dl_url = "https://audio00.forvo.com/ogg/" + str(
-                        base64.b64decode(pronunciation_dl), "utf-8"
+                        base64.b64decode(pronunciation_dl), "utf-8",
                     )
                     is_ogg = True
                 else:
                     pronunciation_dl = pronunciation_dls[0]
                     dl_url = "https://audio00.forvo.com/audios/mp3/" + str(
-                        base64.b64decode(pronunciation_dl), "utf-8"
+                        base64.b64decode(pronunciation_dl), "utf-8",
                     )
 
                 author_info = pronunciation.find_all(
                     lambda el: bool(el.find_all(string=re.compile("Pronunciation by"))),
                     class_="info",
                 )[0]
-                username = re.findall("Pronunciation by(.*)", author_info.get_text(" "), re.S)[0].strip()
+                username = re.findall("Pronunciation by(.*)", author_info.get_text(" "), re.DOTALL)[0].strip()
                 # data-p* appears to be a way to define arguments for click event
                 # handlers; heuristic: if there's only one unique integer value,
                 # then it's the ID
@@ -178,8 +177,8 @@ class Forvo:
                             for link in pronunciation.find_all(class_="ofLink")
                             for k, v in link.attrs.items()
                             if re.match(r"^data-p\d+$", k) and re.match(r"^\d+$", v)
-                        }
-                    )
+                        },
+                    ),
                 )
                 if id_:
                     self.pronunciations.append(
@@ -192,7 +191,7 @@ class Forvo:
                             dl_url,
                             is_ogg,
                             self.word,
-                        )
+                        ),
                     )
 
         return self
