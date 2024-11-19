@@ -1,5 +1,5 @@
 [project]
-name = "rbot"
+name = "rabot"
 version = "1.0.0"
 dependencies = [
     "python-dotenv",
@@ -15,8 +15,11 @@ dev = [
     "ruff",
 ]
 
+[project.urls]
+"Repository" = "https://github.com/daxida/rabot"
+
 [project.scripts]
-run = "rbot:main"
+rabot = "rabot:main"
 
 [tool.pytest.ini_options]
 asyncio_default_fixture_loop_scope = "function"
