@@ -6,6 +6,7 @@ dependencies = [
     "discord",
     "beautifulsoup4",
     "requests",
+    "loguru",
 ]
 
 [project.optional-dependencies]
