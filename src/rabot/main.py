@@ -4,6 +4,7 @@ from dotenv import dotenv_values
 
 from rabot.gr_datetime.gr_date import get_full_date
 from rabot.help.help import HelpMessage
+from rabot.log import logger
 from rabot.pronunciation import pronunciation
 from rabot.utils import NotFoundError, Pagination, fix_greek_spelling
 from rabot.wiktionary.embed_message import embed_message as wiktionary_message
@@ -21,7 +22,7 @@ class MyClient(discord.Client):
         if not self.synced:
             await tree.sync()
             self.synced = True
-        print(f"\033[32mBot is ready! {self.user}\033[0m")
+        logger.success(f"Bot is ready! {self.user}")
 
     async def on_message(self, message: discord.Message) -> None:
         if message.author == self.user:
@@ -49,7 +50,7 @@ async def template_command(
     if wordref_embed is None and word is not None:
         original_word = word
         word = fix_greek_spelling(word)
-        print(f"Converted {original_word=} to {word=}")
+        logger.info(f"Tried to fix spelling: '{original_word}' to '{word}'")
         wordref = Wordref(word, gr_en, hide_words, min_sentences_shown, max_sentences_shown)
         wordref_embed = wordref.fetch_embed()
 

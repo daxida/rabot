@@ -1,6 +1,5 @@
 import re
 import unicodedata
-from typing import Set
 
 
 def lcs(a: str, b: str) -> int:
@@ -44,7 +43,7 @@ def get_delta(a: str, b: str) -> float:
     return (max_length - m) / max_length
 
 
-def highlight_synonyms(sentence: str, synonyms: Set[str]) -> str:
+def highlight_synonyms(sentence: str, synonyms: set[str]) -> str:
     for word in set(sentence.split()):
         # Removes punctuation to match the correct words
         word = re.sub(r"\(|\)|,|\.|", "", word)  # add ; ??

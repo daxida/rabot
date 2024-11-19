@@ -1,11 +1,12 @@
 import re
-from typing import Any, List
+from typing import Any
 
 import requests
 from bs4 import BeautifulSoup
 from discord import Embed
 
-from rabot.utils import is_english
+from rabot.log import logger
+from rabot.utils import RabotError, is_english
 from rabot.wordref.entry import Entry
 
 ATTRIBUTES_EL = {
@@ -33,11 +34,9 @@ ATTRIBUTES_EN = {
     "vtr + prep",
     "vtr",
 }
-TAG = "\033[33mWORDREF:\033[0m"
-OK = "\033[32m[OK]\033[0m"
 
 
-def parse_words(text: str) -> List[str]:
+def parse_words(text: str) -> list[str]:
     """Wordref groups the words together with their attributes.
     This extracts the word by deleting the attributes from a set list.
     """
@@ -72,16 +71,15 @@ class Wordref:
         min_sentences_shown: int,
         max_sentences_shown: int,
     ) -> None:
-        # NOTE: The discord API already strips the given "word".
-        self.word = word
-        self.is_random = word is None
-
-        if self.is_random:
+        if word is None:
+            self.word = None
+            self.is_random = True
             extension = "random/gren"
-        elif is_english(self.word):
-            extension = f"engr/{self.word}"
         else:
-            extension = f"gren/{self.word}"
+            self.word = word.strip()
+            self.is_random = False
+            direction = "engr" if is_english(word) else "gren"
+            extension = f"{direction}/{word}"
 
         self.url = f"{Wordref.wordref_url}/{extension}"
 
@@ -93,6 +91,10 @@ class Wordref:
         self.max_random_iterations = 5
 
     def fetch_embed(self) -> Embed | None:
+        """Fetch an embed.
+
+        If self.is_random is True, retry a set amount of times.
+        """
         if not self.is_random:
             embed = self.try_fetch_embed()
         else:
@@ -105,40 +107,48 @@ class Wordref:
         return embed
 
     def try_fetch_embed(self) -> Embed | None:
+        """Try to fetch an embed.
+
+        May fail (returns None) if either:
+        - The entry is not valid (based on our own set of conditions).
+        - The embed is not valid (based on length conditions).
+        """
         entry = self.try_fetch_entry()
 
         if not entry.is_valid_entry:
             return None
 
-        print(f"{TAG} {OK} found a valid entry for {self.word=}.")
+        logger.success(f"Valid entry for '{self.word}'.")
         entry.add_embed()
 
         if not entry.is_valid_embed:
             return None
 
-        print(f"{TAG} {OK} found a valid embed for {self.word=}.")
+        logger.success(f"Valid embed for '{self.word}'.")
         return entry.embed
 
     def try_fetch_entry(self) -> Entry:
+        logger.debug(f"GET {self.url}")
         response = requests.get(self.url)
         response.raise_for_status()
         soup = BeautifulSoup(response.text, "html.parser")
 
         # Account for the query word being written without accents by scraping the accented word.
         try:
-            self.word = (
-                soup.find("table", {"class": "WRD"})
-                .find("tr", {"class": "even"})
-                .find("td", {"class": "FrWrd"})
-                .strong.text.split()[0]
-            )
+            wrd = soup.find("table", {"class": "WRD"})
+            fr_wrd = wrd.find("tr", {"class": "even"}).find("td", {"class": "FrWrd"})  # type: ignore
+            self.word = fr_wrd.strong.text.split()[0]  # type: ignore
         except Exception:
             pass
 
-        link = f"{Wordref.wordref_url}/gren/{self.word}"  # Forced "gren"
+        if self.word is None:
+            raise RabotError("Could not identify a word in Wordref")
+
+        new_url = f"{Wordref.wordref_url}/gren/{self.word}"  # Forced "gren"
+        logger.debug(f"URL {new_url}")
 
         entry = Entry(
-            link,
+            new_url,
             self.word,
             self.gr_en,
             self.hide_words,
@@ -147,10 +157,7 @@ class Wordref:
             self.is_random,
         )
 
-        print(f"{TAG} requesting {self.url}")
-        print(f"{TAG} trying to fetch '{self.word=}' ({link})")
-        # print(f"{TAG}\n{entry}")
-
+        logger.debug(f"Trying to fetch info for '{self.word}'")
         for res in soup.find_all("table", {"class": "WRD"}):
             self.try_fetch_word(res, entry)
             self.try_fetch_sentence_pairs(res, entry)
@@ -158,6 +165,7 @@ class Wordref:
         return entry
 
     def try_fetch_word(self, res: Any, entry: Entry) -> None:
+        # TODO: Make this return a dict instead of mutating entry.
         for item in res.find_all("tr", {"class": ["even", "odd"]}):
             fr_wrd = item.find("td", {"class": "FrWrd"})
             to_wrd = item.find("td", {"class": "ToWrd"})
@@ -177,9 +185,8 @@ class Wordref:
             # Parts of speech
             if (entry.gr_pos is None) and entry.gr_word:
                 if len(gr_text.split()) > 1 and entry.gr_word in gr_text:
-                    entry.gr_pos = gr_text.replace(entry.gr_word, "").strip()
-                    if "," in entry.gr_pos:
-                        entry.gr_pos = ""
+                    gr_pos = gr_text.replace(entry.gr_word, "").strip()
+                    entry.gr_pos = "" if "," in gr_pos else gr_pos
 
             # Synonyms
             for word in parse_words(gr_text):
@@ -200,6 +207,7 @@ class Wordref:
         """
         gr_sentence = ""
         en_sentence = ""
+
         for item in res.find_all("tr", {"class": ["even", "odd"]}):
             fr_ex = item.find("td", {"class": "FrEx"})
             to_ex = item.find("td", {"class": "ToEx"})
@@ -225,16 +233,18 @@ class Wordref:
 
                 # Option 2
                 stored_already = False
-                for stored_pair in entry.sentences:
+                sentences = set(entry.sentences)
+
+                for stored_pair in sentences:
                     stored_greek, stored_english = stored_pair
-                    if self.gr_en is True:
+                    if self.gr_en:
                         if stored_english == en_sentence:
                             stored_already = True
                             # Our stored answer is already fine
                             if self.word and self.word in stored_greek:
                                 break
-                            entry.sentences.remove((stored_greek, stored_english))
-                            entry.sentences.add((gr_sentence, en_sentence))
+                            sentences.remove((stored_greek, stored_english))
+                            sentences.add((gr_sentence, en_sentence))
                             break
                     # We want our english sentences containing "word"
                     elif stored_greek == gr_sentence:
@@ -242,8 +252,22 @@ class Wordref:
                         # Our stored answer is already fine
                         if self.word and self.word in stored_english:
                             break
-                        entry.sentences.remove((stored_greek, stored_english))
-                        entry.sentences.add((gr_sentence, en_sentence))
+                        sentences.remove((stored_greek, stored_english))
+                        sentences.add((gr_sentence, en_sentence))
                         break
                 if not stored_already:
-                    entry.sentences.add((gr_sentence, en_sentence))
+                    sentences.add((gr_sentence, en_sentence))
+
+                entry.sentences.extend(list(sentences))
+
+
+if __name__ == "__main__":
+    wr = Wordref(
+        word=None,
+        gr_en=True,
+        hide_words=False,
+        min_sentences_shown=1,
+        max_sentences_shown=3,
+    )
+    entry = wr.try_fetch_entry()
+    print(entry)

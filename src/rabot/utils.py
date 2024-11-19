@@ -5,8 +5,15 @@ import discord
 import requests
 from bs4 import BeautifulSoup
 
+from rabot.log import logger
 
+
+# TODO: Move exceptions to its own file
 class NotFoundError(Exception):
+    pass
+
+
+class RabotError(Exception):
     pass
 
 
@@ -78,10 +85,12 @@ def fix_greek_spelling(word: str) -> str:
     """
     greek_word_no_accents = greeklish_to_greek_characters(word)
     url = f"https://www.wordreference.com/gren/{greek_word_no_accents}"
+    logger.debug(f"GET {url}")
     response = requests.get(url)
     response.raise_for_status()
     soup = BeautifulSoup(response.text, "html.parser")
 
+    # TODO: remove dedup (found in wordref::wordref)
     try:
         word = (
             soup.find("table", {"class": "WRD"})
@@ -112,7 +121,8 @@ class Pagination(discord.ui.View):
         if interaction.user == self.interaction.user:
             return True
         emb = discord.Embed(
-            description="Only the author of the command can perform this action.", color=16711680,
+            description="Only the author of the command can perform this action.",
+            color=16711680,
         )
         await interaction.response.send_message(embed=emb, ephemeral=True)
         return False

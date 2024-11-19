@@ -1,12 +1,11 @@
 import pprint
 import urllib
+import urllib.parse
 
 import discord
 
+from rabot.log import logger
 from rabot.wordref.longest import highlight_synonyms
-
-TAG = "\033[35mENTRY:  \033[0m"
-EXIT = "\033[31m[EXIT]\033[0m"
 
 
 class Entry:
@@ -30,11 +29,11 @@ class Entry:
         self.max_sentences_shown = max_sentences_shown
         self.is_random = is_random
 
-        self.en_word = None
+        self.en_word: str | None = None
         self.gr_synonyms = set()
         self.en_synonyms = set()
-        self.sentences = set()
-        self.gr_pos = None  # Parts of speech
+        self.sentences: list[tuple[str, str]] = []
+        self.gr_pos: str | None = None  # Parts of speech
 
         self.embed = None
 
@@ -43,26 +42,26 @@ class Entry:
         word = self.gr_word
 
         if not self.link:
-            print(f"{TAG} {EXIT}, couldn't find the link for {word}.")
+            logger.warning(f"Could not find the link for {word}.")
             return False
         if not self.gr_word:
-            print(f"{TAG} {EXIT}, couldn't find the greek word for {word}.")
+            logger.warning(f"Could not find the greek word for {word}.")
             return False
         if not self.en_word:
-            print(f"{TAG} {EXIT}, couldn't find the english word for {word}.")
+            logger.warning(f"Could not find the english word for {word}.")
             return False
         if not self.gr_synonyms:
-            print(f"{TAG} {EXIT}, couldn't find a greek synonym for {word}.")
+            logger.warning(f"Could not find a greek synonym for {word}.")
             return False
         if not self.en_synonyms:
-            print(f"{TAG} {EXIT}, couldn't find an english synonym for {word}.")
+            logger.warning(f"Could not find an english synonym for {word}.")
             return False
         if not len(self.sentences) >= self.min_sentences_shown:
-            print(f"{TAG} {EXIT}, couldn't find enough sentences ({self.min_sentences_shown}) for {word}.")
+            logger.warning(f"Could not find enough sentences ({self.min_sentences_shown}) for {word}.")
             return False
 
         if not self.gr_pos:
-            print(f"{TAG} [WARN], couldn't find POS for {word}.")
+            logger.warning(f"Could not find POS for {word}.")
 
         return True
 
