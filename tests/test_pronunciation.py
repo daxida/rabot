@@ -1,5 +1,6 @@
+from rabot.exceptions import NotFoundError
 from rabot.pronunciation.pronunciation import get_pronunciation
-from rabot.utils import NotFoundError, fix_greek_spelling
+from rabot.utils import fix_greek_spelling
 
 
 def test_existing_pronunciation():

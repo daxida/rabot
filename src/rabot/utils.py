@@ -7,16 +7,6 @@ from bs4 import BeautifulSoup
 
 from rabot.log import logger
 
-
-# TODO: Move exceptions to its own file
-class NotFoundError(Exception):
-    pass
-
-
-class RabotError(Exception):
-    pass
-
-
 GREEKLISH = str.maketrans(
     {
         "a": "α",
@@ -55,9 +45,9 @@ def is_english(word: str) -> bool:
 
 def get_language_code(language: str) -> str:
     match language:
-        case "english":
+        case "english" | "en":
             return "en"
-        case "greek":
+        case "greek" | "el" | "ελληνικά":
             return "el"
         case _:
             raise NotImplementedError(f"Language {language} is not supported")

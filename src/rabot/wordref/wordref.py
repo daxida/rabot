@@ -5,8 +5,9 @@ import requests
 from bs4 import BeautifulSoup
 from discord import Embed
 
+from rabot.exceptions import RabotError
 from rabot.log import logger
-from rabot.utils import RabotError, is_english
+from rabot.utils import is_english
 from rabot.wordref.entry import Entry
 
 ATTRIBUTES_EL = {

@@ -14,7 +14,7 @@ from urllib.error import HTTPError
 import requests
 from bs4 import BeautifulSoup
 
-from rabot.utils import NotFoundError
+from rabot.exceptions import NotFoundError
 
 search_url = "https://forvo.com/word/"
 download_url = "https://forvo.com/download/mp3/"
@@ -153,13 +153,15 @@ class Forvo:
                         pronunciation.find_all(id=re.compile(r"play_\d+"))[0].attrs["onclick"],
                     )[0]
                     dl_url = "https://audio00.forvo.com/ogg/" + str(
-                        base64.b64decode(pronunciation_dl), "utf-8",
+                        base64.b64decode(pronunciation_dl),
+                        "utf-8",
                     )
                     is_ogg = True
                 else:
                     pronunciation_dl = pronunciation_dls[0]
                     dl_url = "https://audio00.forvo.com/audios/mp3/" + str(
-                        base64.b64decode(pronunciation_dl), "utf-8",
+                        base64.b64decode(pronunciation_dl),
+                        "utf-8",
                     )
 
                 author_info = pronunciation.find_all(
