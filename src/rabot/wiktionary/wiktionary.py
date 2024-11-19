@@ -5,17 +5,16 @@ Returns as a JSON containing word types and entries
 TODO: Unify the parsing.
 """
 
-import logging
 from typing import Any
 
-from aiohttp import ClientSession
+import requests
 from bs4 import BeautifulSoup
 
+from rabot.exceptions import RabotError
+from rabot.log import logger
 from rabot.utils import get_language_code
 
-default_language = "greek"
-logging.basicConfig(level=logging.INFO)
-logger = logging.getLogger("wiktionary")
+DEFAULT_LANG = "greek"
 
 # fmt: off
 ENTRIES = [
@@ -41,7 +40,7 @@ class WiktionaryQuery:
     __slots__ = "language", "soup", "word"
 
     @classmethod
-    async def create(cls, word: str, language: str, printable: bool = True):
+    def create(cls, word: str, language: str, printable: bool = True):
         # https://stackoverflow.com/questions/33128325/how-to-set-class-attribute-with-await-in-init
         self = cls()
         self.word = word
@@ -53,11 +52,10 @@ class WiktionaryQuery:
             base_url += "?printable=yes"
 
         url = base_url.format(word)
-        logger.info(f"{url=}")
+        logger.debug(f"GET {url}")
 
-        async with ClientSession() as session:
-            async with session.get(url) as response:
-                page_content = await response.read()
+        res = requests.get(url)
+        page_content = res.text
 
         soup = BeautifulSoup(page_content, "html.parser")
         WiktionaryQuery.remove_ancient_greek(soup, language)
@@ -88,39 +86,35 @@ class WiktionaryQuery:
                 current_element = next_sibling
 
 
-async def fetch_conjugation(word: str) -> dict[str, str] | None:
-    """Fetch the verb conjugation table from a word.
+VERB_VOICES = ("Ενεργητική φωνή", "Παθητική φωνή")
+ConjugationDict = dict[str, dict[str, list[str]]] | None
+
+
+def fetch_conjugation(word: str) -> ConjugationDict:
+    """Fetch the verb conjugation table.
+
     Retry with word variations by parsing wiktionary.
     """
-    query = await WiktionaryQuery.create(word, default_language, printable=False)
-    conjugation = await _fetch_conjugation(query)
-    logger.info("Success." if conjugation else "Failure.")
+    query = WiktionaryQuery.create(word, DEFAULT_LANG, printable=False)
+    conjugation = _fetch_conjugation(query)
+    if conjugation:
+        logger.success(f"Fetched conjugation for {word}")
+    else:
+        logger.warning(f"Failed fetching conjugation for {word}")
     return conjugation
 
 
-async def _fetch_conjugation(query: WiktionaryQuery) -> dict[str, str] | None:
+def _fetch_conjugation(query: WiktionaryQuery) -> ConjugationDict:
     res = _parse_conjugation(query)
     if res is not None:
         return res
 
-    logger.info("Trying suggestions.")
-    # FIXME: parses too many things
     suggestions = parse_suggestions(query)
-    logger.info(f"Found {len(suggestions)} suggestions.")
-    # Maybe there are cyclic references?
-    max_retries = 10
-    seen_words = {query.word}
+    logger.debug(f"Trying suggestions. Found {len(suggestions)}.")
+    valid_suggestions = list({*suggestions} - {query.word})
 
-    for suggestion in suggestions:
-        if suggestion in seen_words:
-            continue
-        seen_words.add(suggestion)
-
-        if len(seen_words) >= max_retries:
-            logger.warning(f"Reached {max_retries=}")
-            return None
-
-        new_query = await WiktionaryQuery.create(suggestion, default_language, printable=False)
+    for suggestion in valid_suggestions:
+        new_query = WiktionaryQuery.create(suggestion, DEFAULT_LANG, printable=False)
         res = _parse_conjugation(new_query)
         # If we succeed with a suggestion, just return it,
         # even if it is potentially not the best?
@@ -131,6 +125,7 @@ async def _fetch_conjugation(query: WiktionaryQuery) -> dict[str, str] | None:
 def parse_suggestions(query: WiktionaryQuery) -> list[str]:
     """Generic helper to parse suggested words in case of failure."""
     # TODO: merge li soups (needs further testing).
+    # FIXME: parses too many things
     suggestions: list[str] = list()
 
     # Search for deite (see also...) suggestions
@@ -170,17 +165,18 @@ def parse_suggestions(query: WiktionaryQuery) -> list[str]:
     return suggestions
 
 
-def _parse_conjugation(query: WiktionaryQuery) -> dict[str, str] | None:
+def _parse_conjugation(query: WiktionaryQuery) -> ConjugationDict:
     """Parse the verb conjugation table from a word.
+
     Return None in case of failure.
     """
-    logger.info(f"Trying to fetch {query.word}...")
+    logger.debug(f"Trying to fetch {query.word}...")
 
     # Check that the conjugation header is there.
-    # Note that the header doesn't guarantee a valid conjugation table.
+    # Note that the header being present does not guarantee a valid conjugation table.
     # cf. https://el.wiktionary.org/wiki/βρέχω?printable=yes
     if query.soup.find("h4", {"id": "Κλίση"}) is None:
-        logger.info(f"{query.word} has no conjugation table.")
+        logger.trace(f"{query.word} has no conjugation table.")
         return None
 
     parsed_conjugations = _parse_conjugation_table_one(query) or _parse_conjugation_table_two(query)
@@ -188,16 +184,15 @@ def _parse_conjugation(query: WiktionaryQuery) -> dict[str, str] | None:
     return parsed_conjugations
 
 
-def _parse_conjugation_table_one(query: WiktionaryQuery) -> dict[str, str] | None:
+def _parse_conjugation_table_one(query: WiktionaryQuery) -> ConjugationDict:
     """Try fetching the standard table structure."""
-    logger.info("Trying to fetch table structure one.")
-
-    verb_voices = ["Ενεργητική φωνή", "Παθητική φωνή"]
+    logger.debug("Trying to fetch table structure one.")
 
     # The active / passive voices are each in one nav_frame.
     nav_frame = query.soup.find_all("div", {"class": "NavFrame"})
+    logger.debug(f"Found {len(nav_frame)} nav_frames")
     if not nav_frame:
-        logger.info(f"{query.word} has no NavFrames.")
+        logger.trace(f"{query.word} has no NavFrames.")
         return None
 
     # The wiktionary table is organized in entries. From which, only
@@ -210,16 +205,18 @@ def _parse_conjugation_table_one(query: WiktionaryQuery) -> dict[str, str] | Non
     table_data: list[list[list[str]]] = []
 
     for verb_voice in nav_frame:
-        title_res = verb_voice.find("div", {"class": "NavHead"})
-        if title_res is None:
-            continue
-        title = title_res.text.strip()
-        if title not in verb_voices:
+        nav_head = verb_voice.find("div", {"class": "NavHead"})
+        if nav_head is None:
             continue
 
-        voice_data: list[list[str]] = list()
-        entry = verb_voice.find("div", {"class": "NavContent"})
-        for idx, row in enumerate(entry.find_all("tr")):
+        title = nav_head.text.strip()
+        if title not in VERB_VOICES:
+            # This happens when we hit the translation nav_head
+            continue
+
+        voice_data: list[list[str]] = []
+        nav_content = verb_voice.find("div", {"class": "NavContent"})
+        for idx, row in enumerate(nav_content.find_all("tr")):
             # We only need at most 16 rows for the relevant tenses.
             # This prevents the parsing logic from failing if some extra random
             # rows were found.
@@ -244,36 +241,36 @@ def _parse_conjugation_table_one(query: WiktionaryQuery) -> dict[str, str] | Non
         table_data.append(voice_data)
 
     if not table_data:
-        logger.info("No data. No NavFrame contained verb information.")
+        # This is most likely a malformed webpage
+        logger.warning("No data. No NavFrame contained verb information.")
         return None
 
+    relevant_tenses = ["Ενεστώτας", "Παρατατικός", "Αόριστος", "Συνοπτ. Μέλλ."]
     parsed: dict[str, dict[str, list[str]]] = dict()
+
     for idx_voice, voice_data in enumerate(table_data):
         if len(voice_data) % 8 != 0:
-            logger.warning(f"The data size is not a multiple of 8: {len(voice_data)}")
-            assert False
+            logger.error(f"The data size is not a multiple of 8: {len(voice_data)}")
+            raise RabotError("Logic error when fetching conjugation?")
 
         parsed_voice: dict[str, list[str]] = dict()
         for i in range(len(voice_data) // 8):
             _ = voice_data[8 * i]  # tense category
             # Take the transpose
             table = list(zip(*voice_data[8 * i + 1 : 8 * (i + 1)]))
-            for entry in table:
-                parsed_voice[entry[0]] = list(entry[1:])
+            for nav_content in table:
+                tense, *conj = nav_content
+                if tense in relevant_tenses:
+                    parsed_voice[tense] = conj
 
-        parsed[verb_voices[idx_voice]] = parsed_voice
+        parsed[VERB_VOICES[idx_voice]] = parsed_voice
 
-    # Just hack something visual for the moment
-    relevant_tenses = ["Ενεστώτας", "Παρατατικός", "Αόριστος", "Συνοπτ. Μέλλ."]
-
-    cur_voice = verb_voices[0]
-    relevant_parsed = {tense: "\n".join(parsed[cur_voice][tense]) for tense in relevant_tenses}
-
-    return relevant_parsed
+    return parsed
 
 
 def _parse_conjugation_table_two(query: WiktionaryQuery) -> dict[str, str] | None:
-    """Try fetching the non-standard table structure. Cf.
+    """Try fetching the non-standard table structure.
+
     https://el.wiktionary.org/wiki/ξέρω?printable=yes
     https://el.wiktionary.org/wiki/είμαι?printable=yes
 
@@ -282,7 +279,8 @@ def _parse_conjugation_table_two(query: WiktionaryQuery) -> dict[str, str] | Non
     logger.info("Trying to fetch table structure two.")
 
     main_content = query.soup.find("div", {"class": "mw-content-ltr mw-parser-output"})
-    assert main_content is not None
+    if main_content is None:
+        raise RabotError("No main content. Wrong logic?")
 
     tables = main_content.find_all("table")
     if not tables:
@@ -292,14 +290,12 @@ def _parse_conjugation_table_two(query: WiktionaryQuery) -> dict[str, str] | Non
     voice_data: list[list[str]] = list()
 
     for table in tables:
-        # Need 7 rows
         rows = table.find_all("tr")
+        # Need 7 rows
         if len(rows) != 7:
             continue
 
         for row in rows:
-            # Copy pasted from previous function
-
             row_data: list[str] = list()
             for cell in row.find_all(["th", "td"]):
                 # Some variations are <br> separated, we need to replace it
@@ -307,9 +303,7 @@ def _parse_conjugation_table_two(query: WiktionaryQuery) -> dict[str, str] | Non
                 # cf. https://el.wiktionary.org/wiki/βαριέμαι?printable=yes
                 for br in cell.find_all("br"):
                     br.replace_with(" / ")
-
-                text = cell.get_text(strip=True)
-                if text:
+                if text := cell.get_text(strip=True):
                     row_data.append(text)
 
             if row_data:
@@ -329,7 +323,6 @@ def _parse_conjugation_table_two(query: WiktionaryQuery) -> dict[str, str] | Non
     # Take the transpose
     for col in zip(*voice_data):
         parsed[col[0]] = list(col[1:])
-    # print(parsed)
 
     relevant_tenses = ["Ενεστώτας", "Παρατατικός"]
 
@@ -338,8 +331,8 @@ def _parse_conjugation_table_two(query: WiktionaryQuery) -> dict[str, str] | Non
     return relevant_parsed
 
 
-async def fetch_wiktionary_pos(word: str, language: str) -> dict[str, list[str]]:
-    query = await WiktionaryQuery.create(word, language)
+def fetch_wiktionary_pos(word: str, language: str) -> dict[str, list[str]]:
+    query = WiktionaryQuery.create(word, language)
     entries = parse_wiktionary_pos(query, language)
     return entries
 
@@ -392,4 +385,6 @@ def parse_entry(query: WiktionaryQuery, entry_type: str) -> list[str] | None:
 
 
 if __name__ == "__main__":
-    pass
+    # query = WiktionaryQuery.create("τρέχω", "el", False)
+    conj = fetch_conjugation("δημιουργώ")
+    print(conj)

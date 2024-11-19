@@ -1,12 +1,14 @@
 import discord
 from discord import app_commands
 from dotenv import dotenv_values
+from requests.models import HTTPError
 
+from rabot.exceptions import NotFoundError, RabotError
 from rabot.gr_datetime.gr_date import get_full_date
 from rabot.help.help import HelpMessage
 from rabot.log import logger
 from rabot.pronunciation import pronunciation
-from rabot.utils import NotFoundError, Pagination, fix_greek_spelling
+from rabot.utils import Pagination, fix_greek_spelling
 from rabot.wiktionary.embed_message import embed_message as wiktionary_message
 from rabot.wiktionary.wiktionary import fetch_conjugation
 from rabot.wordref.wordref import Wordref
@@ -153,25 +155,39 @@ async def forvo(interaction: discord.Interaction, word: str):
 
 @tree.command(name="conj", description="Returns the present tense of the verb.")
 async def conj(interaction: discord.Interaction, word: str):
-    conjugation = await fetch_conjugation(word)
-    if not conjugation:
-        prev_word = word
-        word = fix_greek_spelling(word)
-        if prev_word != word:
-            conjugation = await fetch_conjugation(word)
-    if not conjugation:
+    try:
+        conjugation = fetch_conjugation(word)
+        if conjugation is None:
+            prev_word, word = word, fix_greek_spelling(word)
+            if prev_word != word:
+                conjugation = fetch_conjugation(word)
+    except RabotError as e:
+        logger.critical(e)
+        await interaction.response.send_message(f"Error while fetching conjugation for {word}.")
+        return
+    except HTTPError as e:
+        logger.error(e)
+        await interaction.response.send_message(f"Error while fetching conjugation for {word}.")
+        return
+
+    if conjugation is None:
         await interaction.response.send_message(f"Could not find conjugation for {word}.")
         return
 
     url = f"https://el.wiktionary.org/wiki/{word}"
-    list_contents = list(conjugation.items())
+    list_contents = []
+    for voice, tense_dict in conjugation.items():
+        voice = voice.replace(" φωνή", "")
+        for tense, conj in tense_dict.items():
+            page = (f"{voice}\n{tense}", "\n".join(conj))
+            list_contents.append(page)
     n = len(list_contents)
 
     async def get_page(page: int):
         verb_tense, conjugation = list_contents[page - 1]
-        emb = discord.Embed(title=word, description=f"{verb_tense}\n\n{conjugation}\n")
+        emb = discord.Embed(title=word, description=f"{verb_tense}\n\n{conjugation}")
         emb.url = url
-        emb.set_author(name=f"Requested by {interaction.user}")
+        # emb.set_author(name=f"Requested by {interaction.user}")
         emb.set_footer(text=f"Page {page} from {n}")
         return emb, n
 
@@ -180,7 +196,10 @@ async def conj(interaction: discord.Interaction, word: str):
 
 def main() -> None:
     config = dotenv_values(".env")
-    client.run(config["TOKEN"])
+    token = config["TOKEN"]
+    if token is None:
+        raise ValueError("Could not find the TOKEN at .env")
+    client.run(token)
 
 
 if __name__ == "__main__":
