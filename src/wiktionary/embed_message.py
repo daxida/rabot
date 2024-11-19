@@ -67,7 +67,7 @@ async def embed_message(word: str, language: str) -> list[discord.Embed]:
     embeds = []
     for i, part in enumerate(embed_parts):
         embed = discord.Embed(
-            title=f"{title} (Part {i+1}/{len(embed_parts)})" if len(embed_parts) > 1 else title,
+            title=f"{title} (Part {i + 1}/{len(embed_parts)})" if len(embed_parts) > 1 else title,
             url=link,
             description=part,
             color=0x3392FF,

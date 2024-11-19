@@ -135,7 +135,7 @@ class Wordref:
                 .find("td", {"class": "FrWrd"})
                 .strong.text.split()[0]
             )
-        except:
+        except Exception:
             pass
 
         link = f"{Wordref.wordref_url}/gren/{self.word}"  # Forced "gren"
@@ -162,16 +162,16 @@ class Wordref:
 
     def try_fetch_word(self, res: Any, entry: Entry) -> None:
         for item in res.find_all("tr", {"class": ["even", "odd"]}):
-            FrWrd = item.find("td", {"class": "FrWrd"})
-            ToWrd = item.find("td", {"class": "ToWrd"})
+            fr_wrd = item.find("td", {"class": "FrWrd"})
+            to_wrd = item.find("td", {"class": "ToWrd"})
 
-            if not FrWrd or not ToWrd:
+            if not fr_wrd or not to_wrd:
                 continue
 
-            en_text = ToWrd.text
-            gr_text = FrWrd.text
+            en_text = to_wrd.text
+            gr_text = fr_wrd.text
 
-            if is_english(FrWrd.text):
+            if is_english(fr_wrd.text):
                 en_text, gr_text = gr_text, en_text
 
             if not entry.en_word:
@@ -206,19 +206,19 @@ class Wordref:
         gr_sentence = ""
         en_sentence = ""
         for item in res.find_all("tr", {"class": ["even", "odd"]}):
-            FrEx = item.find("td", {"class": "FrEx"})
-            ToEx = item.find("td", {"class": "ToEx"})
+            fr_ex = item.find("td", {"class": "FrEx"})
+            to_ex = item.find("td", {"class": "ToEx"})
 
             # Resets buffered sentences
-            if not FrEx and not ToEx:
+            if not fr_ex and not to_ex:
                 en_sentence = ""
                 gr_sentence = ""
 
             # Buffers sentences to then group them in pairs
-            if FrEx:
-                en_sentence = FrEx.text
-            if ToEx:
-                gr_sentence = ToEx.text
+            if fr_ex:
+                en_sentence = fr_ex.text
+            if to_ex:
+                gr_sentence = to_ex.text
                 # Delete "Translation not found" message
                 if "Αυτή η πρόταση δεν είναι μετάφραση της αγγλικής πρότασης." in gr_sentence:
                     gr_sentence = ""

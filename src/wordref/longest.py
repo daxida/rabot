@@ -3,8 +3,8 @@ import unicodedata
 from typing import Set
 
 
-def LCS(a: str, b: str) -> int:
-    """Finds the longuest common substring of a and b"""
+def lcs(a: str, b: str) -> int:
+    """Finds the longuest common substring of a and b."""
     if a == b:
         return len(a)
     var = 0
@@ -24,8 +24,7 @@ def LCS(a: str, b: str) -> int:
 
 
 def normalize_greek_word(word: str) -> str:
-    """
-    Return a greek word without accents in lowercase.
+    """Return a greek word without accents in lowercase.
     ["Άλφα", "Αλφα", "άλφα", "αλφα"] are all converted into "αλφα".
 
     >>> words = ["Άλφα", "Αλφα", "άλφα", "αλφα"]
@@ -41,7 +40,7 @@ def get_delta(a: str, b: str) -> float:
     bb = normalize_greek_word(b)
 
     max_length = max(len(aa), len(bb))
-    m = max(LCS(aa, bb), LCS(bb, aa))
+    m = max(lcs(aa, bb), lcs(bb, aa))
 
     return (max_length - m) / max_length
 

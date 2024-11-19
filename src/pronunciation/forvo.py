@@ -14,7 +14,7 @@ from urllib.error import HTTPError
 import requests
 from bs4 import BeautifulSoup
 
-from utils import NotFoundException
+from utils import NotFoundError
 
 search_url = "https://forvo.com/word/"
 download_url = "https://forvo.com/download/mp3/"
@@ -41,7 +41,8 @@ class Pronunciation:
 HEADERS = [
     (
         "User-Agent",
-        "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/58.0.3029.110 Safari/537.3",
+        "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 "
+        "(KHTML, like Gecko) Chrome/58.0.3029.110 Safari/537.3",
     ),
     (
         "Accept",
@@ -90,7 +91,7 @@ class Forvo:
         except HTTPError as e:
             log_debug(f"[Forvo.py] HTTPError: {e}")
             if e.code == 404:
-                raise NotFoundException()
+                raise NotFoundError()
             else:
                 # Sometimes we can get 403: Forbidden
                 raise e
@@ -108,7 +109,7 @@ class Forvo:
             re.findall(r"language-container-(\w{2,4})", el.attrs["id"])[0] for el in available_langs_el
         ]
         if self.language not in available_langs:
-            raise NotFoundException()
+            raise NotFoundError()
         log_debug("[Forvo.py] Done compiling list of available langs")
 
         log_debug("[Forvo.py] Searching lang container")

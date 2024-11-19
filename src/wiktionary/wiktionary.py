@@ -20,13 +20,13 @@ logger = logging.getLogger("wiktionary")
 
 # fmt: off
 ENTRIES = [
-    "Ετυμολογία", "Ετυμολογία_1", "Ετυμολογία_2", 
+    "Ετυμολογία", "Ετυμολογία_1", "Ετυμολογία_2",
     "Προφορά", "Προφορά_1", "Προφορά_2",
-    "Επιφώνημα", "Έκφραση", "Ουσιαστικό", 
+    "Επιφώνημα", "Έκφραση", "Ουσιαστικό",
     "Εκφράσεις", "Επίθετο", "Επίρρημα", "Συνώνυμα", "Αντώνυμα",
     "Κλιτικός_τύπος_επιθέτου", "Κλιτικός_τύπος_ουσιαστικού",
     "Πολυλεκτικοί_όροι", "Σημειώσεις"
-] # Μεταφράσεις, "Σύνθετα", "Συγγενικά" cut off here
+]  # Μεταφράσεις, "Σύνθετα", "Συγγενικά" cut off here
 ENTRIES_EN = [
     "Etymology", "Etymology_1", "Etymology_2",
     "Pronunciation", "Pronunciation_2", "Pronunciation_3",
@@ -49,11 +49,11 @@ class WiktionaryQuery:
 
         lcode = get_language_code(language)
         # Not sure why we would want the printable version here.
-        URL = f"https://{lcode}.wiktionary.org/wiki/{{}}"
+        base_url = f"https://{lcode}.wiktionary.org/wiki/{{}}"
         if printable:
-            URL += "?printable=yes"
+            base_url += "?printable=yes"
 
-        url = URL.format(word)
+        url = base_url.format(word)
         logger.info(f"{url=}")
 
         async with ClientSession() as session:
@@ -137,12 +137,12 @@ def parse_suggestions(query: WiktionaryQuery) -> list[str]:
     suggestions: list[str] = list()
 
     # Search for deite (see also...) suggestions
-    DEITE = ["→ δείτε τη λέξη", "→\xa0δείτε\xa0τη\xa0λέξη"]
+    deite = ["→ δείτε τη λέξη", "→\xa0δείτε\xa0τη\xa0λέξη"]
 
     # cf: https://el.wiktionary.org/wiki/αγαπώ?printable=yes
     res = query.soup.find_all("div", {"class": "NavContent"})
     for div in res:
-        if any(d in div.text for d in DEITE):
+        if any(d in div.text for d in deite):
             links = div.find_all("a", title=True)
             for link in links:
                 suggestions.append(link["title"])
@@ -153,7 +153,7 @@ def parse_suggestions(query: WiktionaryQuery) -> list[str]:
     # cf: https://el.wiktionary.org/wiki/βρίσκομαι?printable=yes
     res = query.soup.find_all("li")
     for span in res:
-        if any(d in span.text for d in DEITE):
+        if any(d in span.text for d in deite):
             links = span.find_all("a", title=True)
             for link in links:
                 suggestions.append(link["title"])
@@ -195,7 +195,8 @@ def _parse_conjugation(query: WiktionaryQuery) -> dict[str, str] | None:
 def _parse_conjugation_table_one(query: WiktionaryQuery) -> dict[str, str] | None:
     """Try fetching the standard table structure."""
     logger.info("Trying to fetch table structure one.")
-    VERB_VOICES = ["Ενεργητική φωνή", "Παθητική φωνή"]
+
+    verb_voices = ["Ενεργητική φωνή", "Παθητική φωνή"]
 
     # The active / passive voices are each in one nav_frame.
     nav_frame = query.soup.find_all("div", {"class": "NavFrame"})
@@ -217,7 +218,7 @@ def _parse_conjugation_table_one(query: WiktionaryQuery) -> dict[str, str] | Non
         if title_res is None:
             continue
         title = title_res.text.strip()
-        if title not in VERB_VOICES:
+        if title not in verb_voices:
             continue
 
         voice_data: list[list[str]] = list()
@@ -258,19 +259,19 @@ def _parse_conjugation_table_one(query: WiktionaryQuery) -> dict[str, str] | Non
 
         parsed_voice: dict[str, list[str]] = dict()
         for i in range(len(voice_data) // 8):
-            _tense_category = voice_data[8 * i]
+            _ = voice_data[8 * i]  # tense category
             # Take the transpose
             table = list(zip(*voice_data[8 * i + 1 : 8 * (i + 1)]))
             for entry in table:
                 parsed_voice[entry[0]] = list(entry[1:])
 
-        parsed[VERB_VOICES[idx_voice]] = parsed_voice
+        parsed[verb_voices[idx_voice]] = parsed_voice
 
     # Just hack something visual for the moment
-    RELEVANT_TENSES = ["Ενεστώτας", "Παρατατικός", "Αόριστος", "Συνοπτ. Μέλλ."]
+    relevant_tenses = ["Ενεστώτας", "Παρατατικός", "Αόριστος", "Συνοπτ. Μέλλ."]
 
-    cur_voice = VERB_VOICES[0]
-    relevant_parsed = {tense: "\n".join(parsed[cur_voice][tense]) for tense in RELEVANT_TENSES}
+    cur_voice = verb_voices[0]
+    relevant_parsed = {tense: "\n".join(parsed[cur_voice][tense]) for tense in relevant_tenses}
 
     return relevant_parsed
 
@@ -335,8 +336,9 @@ def _parse_conjugation_table_two(query: WiktionaryQuery) -> dict[str, str] | Non
         parsed[col[0]] = list(col[1:])
     # print(parsed)
 
-    RELEVANT_TENSES = ["Ενεστώτας", "Παρατατικός"]
-    relevant_parsed = {tense: "\n".join(parsed[tense]) for tense in RELEVANT_TENSES}
+    relevant_tenses = ["Ενεστώτας", "Παρατατικός"]
+
+    relevant_parsed = {tense: "\n".join(parsed[tense]) for tense in relevant_tenses}
 
     return relevant_parsed
 

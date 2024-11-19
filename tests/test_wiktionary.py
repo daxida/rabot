@@ -10,30 +10,27 @@ pytest_plugins = ("pytest_asyncio",)
 
 @pytest.mark.asyncio()
 async def test_wiktionary_fetch_conjugation():
-    """
-    A simple concurrent async test.
+    """A simple concurrent async test.
 
     This uses no cache and sends quite some requests to wiktionary. Use carefully.
     Use the debug entry in the fixture to only run certain entries.
     """
-    DEBUG = False
+    debug = False
 
-    # fmt: off
     fixture = [
-        # verb,  has_result, debug
-        ("αγαπώ",     True,  False),
-        ("αγαπάω",    True,  False),
-        ("περπατώ",   True,  False),
-        ("περπατάω",  True,  False),
-        ("χαραλώνω",  False, False),
-        ("βρέχω",     False, False),
-        ("βρίσκομαι", True,  False),
-        ("ξέρω",      True,  False),
-        ("είμαι",     True,  False),
+        # verb // has_result // debug
+        ("αγαπώ", True, False),
+        ("αγαπάω", True, False),
+        ("περπατώ", True, False),
+        ("περπατάω", True, False),
+        ("χαραλώνω", False, False),
+        ("βρέχω", False, False),
+        ("βρίσκομαι", True, False),
+        ("ξέρω", True, False),
+        ("είμαι", True, False),
     ]
-    # fmt: on
 
-    if DEBUG:
+    if debug:
         fixture = [(verb, has_result, debug) for verb, has_result, debug in fixture if debug]
 
     tasks = [fetch_conjugation(verb) for verb, _, _ in fixture]

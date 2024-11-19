@@ -42,7 +42,10 @@ def get_date(dt: datetime) -> str:
     str_m = MONTHS_GENITIVE[m - 1]
     str_y = num2word(y)
 
-    fdate = f"Καλημέρα. Σήμερα η μέρα, εδώ που μένω εγώ, είναι {str_wd}, {str_d} (του) {str_m} (του έτους) {str_y}."
+    fdate = (
+        "Καλημέρα. Σήμερα η μέρα, εδώ που μένω εγώ, "
+        f"είναι {str_wd}, {str_d} (του) {str_m} (του έτους) {str_y}."
+    )
 
     return fdate
 

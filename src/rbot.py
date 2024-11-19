@@ -5,7 +5,7 @@ from dotenv import dotenv_values
 import pronunciation.pronunciation as pronunciation
 from gr_datetime.gr_date import get_full_date
 from help.help import HelpMessage
-from utils import NotFoundException, Pagination, fix_greek_spelling
+from utils import NotFoundError, Pagination, fix_greek_spelling
 from wiktionary.embed_message import embed_message as wiktionary_message
 from wiktionary.wiktionary import fetch_conjugation
 from wordref.wordref import Wordref
@@ -137,12 +137,12 @@ async def forvo(interaction: discord.Interaction, word: str):
 
     try:
         message, audio_file = pronunciation.get_pronunciation(word)
-    except NotFoundException:
+    except NotFoundError:
         # In case of failure, try again once with fixed spelling.
         word = fix_greek_spelling(word)
         try:
             message, audio_file = pronunciation.get_pronunciation(word)
-        except NotFoundException:
+        except NotFoundError:
             await interaction.response.send_message(f"Could not find the word {word}!")
             return
 

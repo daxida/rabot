@@ -1,12 +1,12 @@
 import json
-from typing import Callable, Optional
+from typing import Callable
 
 import discord
 import requests
 from bs4 import BeautifulSoup
 
 
-class NotFoundException(Exception):
+class NotFoundError(Exception):
     pass
 
 
@@ -90,7 +90,7 @@ def fix_greek_spelling(word: str) -> str:
             .find("td", {"class": "FrWrd"})
             .strong.text.split()[0]
         )
-    except:
+    except Exception:
         pass
 
     # We have to trim in case of multiple comma separated words. For example:
@@ -105,8 +105,8 @@ class Pagination(discord.ui.View):
     def __init__(self, interaction: discord.Interaction, get_page: Callable):
         self.interaction = interaction
         self.get_page = get_page
-        self.total_pages: Optional[int] = None
-        self.index = 1
+        self.total_pages: int = 0
+        self.index: int = 1
         super().__init__(timeout=100)
 
     async def interaction_check(self, interaction: discord.Interaction) -> bool:
@@ -114,14 +114,14 @@ class Pagination(discord.ui.View):
             return True
         else:
             emb = discord.Embed(
-                description=f"Only the author of the command can perform this action.", color=16711680
+                description="Only the author of the command can perform this action.", color=16711680
             )
             await interaction.response.send_message(embed=emb, ephemeral=True)
             return False
 
     async def navigate(self):
         emb, self.total_pages = await self.get_page(self.index)
-        assert self.total_pages is not None
+        assert self.total_pages > 0
 
         if self.total_pages == 1:
             await self.interaction.response.send_message(embed=emb)

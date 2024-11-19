@@ -130,9 +130,9 @@ class Entry:
         show_synonyms=False,
         show_sentences=True,
         show_footer=True,
-    ) -> discord.Embed:
-        """
-        Turns the entry into a Discord embed.
+    ) -> None:
+        """Turns the entry into a Discord embed.
+
         https://plainenglish.io/blog/send-an-embed-with-a-discord-bot-in-python
 
         Stores it to self.embed to avoid repeated calls.
@@ -157,10 +157,10 @@ class Entry:
         # descprition formatting
         sep = "||" if self.hide_words else ""
 
-        ## translations
+        # translations
         translations = f"**Translations:** {sep}{self.en_word}{sep}\n"
 
-        ## synonyms (Wordreference structure for this is irregular.)
+        # synonyms (Wordreference structure for this is irregular.)
         amount_synonyms_shown = 2
         synonyms_lst = list(self.gr_synonyms - {self.gr_word})
         # Prefer synonyms witn no spaces
@@ -170,7 +170,7 @@ class Entry:
         synonyms = "**Synonyms: **"
         synonyms += f"{sep}{synonyms_str}{sep}\n"
 
-        ## sentences
+        # sentences
         self.sort_sentences_by_contains_word()
         sentences = "**Sentences:**\n"
         # We can't write "> {idx}." with a dot because Discord will overwrite the indexes.

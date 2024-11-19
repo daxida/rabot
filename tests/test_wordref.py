@@ -16,8 +16,5 @@ def test_wordref():
     assert entry.min_sentences_shown == min_sentences_shown
     assert entry.max_sentences_shown == max_sentences_shown
 
-    # print(entry)
-
-    # FIXME: the last one should not be a synonym
-    en_synonyms = {"daily", "quotidian", "diurnal", "μη διαθέσιμη μετάφραση"}
+    en_synonyms = {"daily", "quotidian", "diurnal"}
     assert entry.en_synonyms == en_synonyms

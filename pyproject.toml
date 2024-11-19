@@ -23,3 +23,14 @@ asyncio_default_fixture_loop_scope = "function"
 
 [tool.ruff]
 line-length = 110
+output-format = "concise"
+
+[tool.ruff.lint]
+preview = true
+select = [
+    "E",    # pycodestyle error
+    "W",    # pycodestyle warning
+    "I",    # isort
+    "N",    # pep8-naming
+    "F",    # Pyflakes rules
+]
