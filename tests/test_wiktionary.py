@@ -2,10 +2,18 @@ import asyncio
 
 import pytest
 
-from rabot.wiktionary.wiktionary import fetch_conjugation, fetch_wiktionary_pos
+from rabot.wiktionary.wiktionary import ConjugationDict, fetch_conjugation, fetch_wiktionary_pos
 
 # https://stackoverflow.com/questions/70015634/how-to-test-async-function-using-pytest
 pytest_plugins = ("pytest_asyncio",)
+
+
+async def fetch_conjugation_async(verb: str) -> ConjugationDict:
+    return fetch_conjugation(verb)
+
+
+async def fetch_wiktionary_pos_async(word: str, language: str) -> dict[str, list[str]]:
+    return fetch_wiktionary_pos(word, language)
 
 
 @pytest.mark.asyncio
@@ -33,7 +41,7 @@ async def test_wiktionary_fetch_conjugation():
     if debug:
         fixture = [(verb, has_result, debug) for verb, has_result, debug in fixture if debug]
 
-    tasks = [fetch_conjugation(verb) for verb, _, _ in fixture]
+    tasks = [fetch_conjugation_async(verb) for verb, _, _ in fixture]
     results = await asyncio.gather(*tasks)
     for (verb, has_result, _), received in zip(fixture, results):
         if has_result:
@@ -46,7 +54,7 @@ async def test_wiktionary_fetch_conjugation():
 async def test_wiktionary_fetch_word_greek():
     language = "greek"
     fixture_el = ["τραπέζι", "εστιατόριο"]
-    tasks = [fetch_wiktionary_pos(word, language) for word in fixture_el]
+    tasks = [fetch_wiktionary_pos_async(word, language) for word in fixture_el]
     results = await asyncio.gather(*tasks)
     for result in results:
         assert "Ετυμολογία" in result
@@ -57,7 +65,7 @@ async def test_wiktionary_fetch_word_greek():
 async def test_wiktionary_fetch_word_english():
     language = "english"
     fixture_el = ["table", "restaurant"]
-    tasks = [fetch_wiktionary_pos(word, language) for word in fixture_el]
+    tasks = [fetch_wiktionary_pos_async(word, language) for word in fixture_el]
     results = await asyncio.gather(*tasks)
     for result in results:
         assert "Etymology" in result
