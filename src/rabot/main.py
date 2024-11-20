@@ -15,7 +15,7 @@ from rabot.exceptions import NotFoundError, RabotError
 from rabot.log import logger
 from rabot.utils import Pagination, fix_greek_spelling
 
-RABOT_CMD_RE = re.compile(r"^rabot\s*,?\s*(.*)\s*")
+RABOT_CMD_RE = re.compile(r"^rabot\s*,?\s*(.*)\s*$")
 
 
 class MyClient(discord.Client):

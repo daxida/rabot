@@ -3,12 +3,12 @@ from discord import Embed
 FAQS = {
     "default": {
         "alias": [],
+        "author": "me",
         "title": "FAQ list",
         "description": """
 Available commands are:
 `rabot, explain language transfer`
 """,
-        "author": "me",
     },
     "language transfer": {
         "alias": [
@@ -18,6 +18,7 @@ Available commands are:
             "what is language transfer",
             "what is lt",
         ],
+        "author": "scarlettparker",
         "title": "What is Language Transfer?",
         "description": """
 Language Transfer is an audio series that teaches the basics of Modern Greek in a natural and easy-to-comprehend manner. It focuses on grammar and teaches useful vocabulary to prepare you for everyday conversations.
@@ -30,7 +31,23 @@ The complete series can be found on:
 
 The audio series follows the teacher (Mihalis) as he teaches a student useful grammatical constructions and how to form sentences naturally, allowing you to follow along by putting yourself in the student’s shoes. More useful resources can be found in [the resources channel](https://discord.com/channels/350234668680871946/359578025228107776/1132288734738522112), notably in the pins, to help you advance your Greek level after Language Transfer.
 """,
-        "author": "scarlettparker",
+    },
+    "quiz": {
+        "alias": [
+            "explain quiz",
+        ],
+        "author": "me",
+        "title": "",
+        "description": """
+Type `k!q DECK`.
+
+Examples:
+- `k!q mem5` (Memrise first 5k words by frequency)
+- `k!q mem1` (Memrise first 1k words by frequency)
+- `k!q apl` (Aorist Passive verbs)
+- `k!q aal` (Aorist Active verbs) 
+- `k!q wd` (Words that appeared in 📅-word-of-the-day channel.
+""",
     },
 }
 
