@@ -9,3 +9,5 @@ logger_format = (
 )
 logger.remove()
 logger.add(sys.stderr, format=logger_format)
+
+logger.add("logs.log", rotation="10 MB", retention="7 days")
