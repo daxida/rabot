@@ -36,7 +36,7 @@ client = MyClient(intents)
 tree = app_commands.CommandTree(client)
 
 
-async def template_command(
+async def templ_wordref(
     interaction: discord.Interaction,
     word: str | None,
     gr_en: bool,
@@ -44,6 +44,7 @@ async def template_command(
     min_sentences_shown: int,
     max_sentences_shown: int,
 ):
+    """Template for wordref commands."""
     wordref = Wordref(word, gr_en, hide_words, min_sentences_shown, max_sentences_shown)
     wordref_embed = wordref.fetch_embed()
 
@@ -67,14 +68,10 @@ async def template_command(
     #     await interaction.response.send_message(content=f"Error: {e}")
 
 
-# helper function for wiktionary stuff
-async def wiktionary_handler(
-    interaction: discord.Interaction,
-    word: str,
-    language: str,
-    *,
-    ephemeral: str = "True",
+async def templ_wiktionary(
+    interaction: discord.Interaction, word: str, language: str, *, ephemeral: str = "True"
 ):
+    """Template for wiktionary commands."""
     eph = ephemeral.lower() in ["true", "yes", "1"]
     embeds = await wiktionary_message(word, language)
 
@@ -85,41 +82,33 @@ async def wiktionary_handler(
 
 
 @tree.command(name="wiktionary", description="Return the Wiktionary (English) entry for a word")
-async def wiktionary(
-    interaction: discord.Interaction,
-    word: str,
-    ephemeral: str = "True",
-):
-    await wiktionary_handler(interaction, word, language="english", ephemeral=ephemeral)
+async def wiktionary(interaction: discord.Interaction, word: str, ephemeral: str = "True"):
+    await templ_wiktionary(interaction, word, language="english", ephemeral=ephemeral)
 
 
 @tree.command(name="wiktionarygr", description="Return the Wiktionary (Greek) entry for a word")
-async def wiktionarygr(
-    interaction: discord.Interaction,
-    word: str,
-    ephemeral: str = "True",
-):
-    await wiktionary_handler(interaction, word, language="greek", ephemeral=ephemeral)
+async def wiktionarygr(interaction: discord.Interaction, word: str, ephemeral: str = "True"):
+    await templ_wiktionary(interaction, word, language="greek", ephemeral=ephemeral)
 
 
 @tree.command(name="wotdgr", description="Prompts a random Greek word from Wordref")
 async def wotdgr(interaction: discord.Interaction):
-    await template_command(interaction, None, True, True, 1, 3)
+    await templ_wordref(interaction, None, True, True, 1, 3)
 
 
 @tree.command(name="wotden", description="Prompts a random english word from Wordref")
 async def wotden(interaction: discord.Interaction):
-    await template_command(interaction, None, False, True, 1, 3)
+    await templ_wordref(interaction, None, False, True, 1, 3)
 
 
 @tree.command(name="searchgr", description="Searches the given Greek word in Wordref (supports greeklish)")
 async def searchgr(interaction: discord.Interaction, word: str):
-    await template_command(interaction, word, True, False, 0, 2)
+    await templ_wordref(interaction, word, True, False, 0, 2)
 
 
 @tree.command(name="searchen", description="Searches the given english word in Wordref")
 async def searchen(interaction: discord.Interaction, word: str):
-    await template_command(interaction, word, False, False, 0, 2)
+    await templ_wordref(interaction, word, False, False, 0, 2)
 
 
 @tree.command(name="date", description="Prompts date in Fidis format")
