@@ -2,8 +2,8 @@ import re
 
 import discord
 
+from rabot.cogs.wiktionary.wiktionary import fetch_wiktionary_pos
 from rabot.utils import get_language_code
-from rabot.wiktionary.wiktionary import fetch_wiktionary_pos
 
 
 def split_long_text(text: str, max_length: int) -> list[str]:

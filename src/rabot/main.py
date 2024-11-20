@@ -3,15 +3,14 @@ from discord import app_commands
 from dotenv import dotenv_values
 from requests.models import HTTPError
 
+from rabot.cogs.gr_datetime.gr_date import get_full_date
+from rabot.cogs.pronunciation import pronunciation
+from rabot.cogs.wiktionary.embed_message import embed_message as wiktionary_message
+from rabot.cogs.wiktionary.wiktionary import fetch_conjugation
+from rabot.cogs.wordref.wordref import Wordref
 from rabot.exceptions import NotFoundError, RabotError
-from rabot.gr_datetime.gr_date import get_full_date
-from rabot.help.help import HelpMessage
 from rabot.log import logger
-from rabot.pronunciation import pronunciation
 from rabot.utils import Pagination, fix_greek_spelling
-from rabot.wiktionary.embed_message import embed_message as wiktionary_message
-from rabot.wiktionary.wiktionary import fetch_conjugation
-from rabot.wordref.wordref import Wordref
 
 
 class MyClient(discord.Client):
@@ -73,18 +72,19 @@ async def wiktionary_handler(
     interaction: discord.Interaction,
     word: str,
     language: str,
+    *,
     ephemeral: str = "True",
 ):
-    ephemeral = ephemeral.lower() in ["true", "yes", "1"]
+    eph = ephemeral.lower() in ["true", "yes", "1"]
     embeds = await wiktionary_message(word, language)
 
-    await interaction.response.send_message(embed=embeds[0], ephemeral=ephemeral)
+    await interaction.response.send_message(embed=embeds[0], ephemeral=eph)
     if len(embeds) > 1:
         for embed in embeds[1:]:
-            await interaction.followup.send(embed=embed, ephemeral=ephemeral)
+            await interaction.followup.send(embed=embed, ephemeral=eph)
 
 
-@tree.command(name="wiktionary", description="Return the Wiktionary entry for a word")
+@tree.command(name="wiktionary", description="Return the Wiktionary (English) entry for a word")
 async def wiktionary(
     interaction: discord.Interaction,
     word: str,
@@ -120,12 +120,6 @@ async def searchgr(interaction: discord.Interaction, word: str):
 @tree.command(name="searchen", description="Searches the given english word in Wordref")
 async def searchen(interaction: discord.Interaction, word: str):
     await template_command(interaction, word, False, False, 0, 2)
-
-
-@tree.command(name="helprafa", description="Explains rafabot")
-async def helprafa(interaction: discord.Interaction):
-    embed = discord.Embed(title="Explains rafabot", description=HelpMessage().message, color=0xFF5733)
-    await interaction.response.send_message(embed=embed)
 
 
 @tree.command(name="date", description="Prompts date in Fidis format")

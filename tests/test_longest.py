@@ -1,6 +1,6 @@
 import itertools
 
-from rabot.wordref.longest import get_delta
+from rabot.cogs.wordref.longest import get_delta
 
 
 def test_longest():

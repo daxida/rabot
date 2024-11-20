@@ -4,8 +4,8 @@ import urllib.parse
 
 import discord
 
+from rabot.cogs.wordref.longest import highlight_synonyms
 from rabot.log import logger
-from rabot.wordref.longest import highlight_synonyms
 
 
 class Entry:

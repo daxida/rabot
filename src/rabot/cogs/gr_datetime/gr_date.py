@@ -1,6 +1,6 @@
 from datetime import datetime
 
-from rabot.gr_datetime.gr_numbers import num2word
+from rabot.cogs.gr_datetime.gr_numbers import num2word
 
 DAYS_NOMINATIVE = [
     "Δευτέρα",
