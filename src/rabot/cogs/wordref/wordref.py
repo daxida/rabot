@@ -10,6 +10,7 @@ from rabot.exceptions import RabotError
 from rabot.log import logger
 from rabot.utils import is_english
 
+# https://www.wordreference.com/english/abbreviationsWRD.aspx?dict=engr&abbr=κύρ&src=WR
 ATTRIBUTES_EL = {
     "επίθ": "adj",
     "επίθ άκλ": "TODO",
@@ -38,8 +39,9 @@ ATTRIBUTES_EN = {
 
 
 def parse_words(text: str) -> list[str]:
-    """Wordref groups the words together with their attributes.
-    This extracts the word by deleting the attributes from a set list.
+    """Remove attributes to extract a clean list of words.
+
+    Wordref groups words together with their attributes.
     """
     attributes = ATTRIBUTES_EN if is_english(text) else ATTRIBUTES_EL
 
@@ -62,7 +64,7 @@ class Wordref:
     Everything is stored in an Entry class, where the suitability logic and formatting is done.
     """
 
-    wordref_url = "https://www.wordreference.com"
+    BASE_URL = "https://www.wordreference.com"
 
     def __init__(
         self,
@@ -82,7 +84,7 @@ class Wordref:
             direction = "engr" if is_english(word) else "gren"
             extension = f"{direction}/{word}"
 
-        self.url = f"{Wordref.wordref_url}/{extension}"
+        self.url = f"{Wordref.BASE_URL}/{extension}"
 
         self.gr_en = gr_en
         self.hide_words = hide_words
@@ -97,20 +99,18 @@ class Wordref:
         If self.is_random is True, retry a set amount of times.
         """
         if not self.is_random:
-            embed = self.try_fetch_embed()
-        else:
-            embed = None
-            for _ in range(self.max_random_iterations):
-                embed = self.try_fetch_embed()
-                if embed is not None:
-                    break
+            return self.try_fetch_embed()
 
-        return embed
+        for _ in range(self.max_random_iterations):
+            if (embed := self.try_fetch_embed()) is not None:
+                return embed
+
+        return None
 
     def try_fetch_embed(self) -> Embed | None:
         """Try to fetch an embed.
 
-        May fail (returns None) if either:
+        May fail (return None) if either:
         - The entry is not valid (based on our own set of conditions).
         - The embed is not valid (based on length conditions).
         """
@@ -134,18 +134,9 @@ class Wordref:
         response.raise_for_status()
         soup = BeautifulSoup(response.text, "html.parser")
 
-        # Account for the query word being written without accents by scraping the accented word.
-        try:
-            wrd = soup.find("table", {"class": "WRD"})
-            fr_wrd = wrd.find("tr", {"class": "even"}).find("td", {"class": "FrWrd"})  # type: ignore
-            self.word = fr_wrd.strong.text.split()[0]  # type: ignore
-        except Exception:
-            pass
+        self.word = self.fetch_accented_word(soup)
 
-        if self.word is None:
-            raise RabotError("Could not identify a word in Wordref")
-
-        new_url = f"{Wordref.wordref_url}/gren/{self.word}"  # Forced "gren"
+        new_url = f"{Wordref.BASE_URL}/gren/{self.word}"  # Forced "gren"
         logger.debug(f"URL {new_url}")
 
         entry = Entry(
@@ -164,6 +155,17 @@ class Wordref:
             self.try_fetch_sentence_pairs(res, entry)
 
         return entry
+
+    def fetch_accented_word(self, soup) -> str:
+        """Fetch the accented word in case of non-accented input.
+
+        Relies on wordref.com doing the dirty job of figuring it out for us."""
+        try:
+            wrd = soup.find("table", {"class": "WRD"})
+            fr_wrd = wrd.find("tr", {"class": "even"}).find("td", {"class": "FrWrd"})  # type: ignore
+            return fr_wrd.strong.text.split()[0]  # type: ignore
+        except Exception as e:
+            raise e
 
     def try_fetch_word(self, res: Any, entry: Entry) -> None:
         # TODO: Make this return a dict instead of mutating entry.
@@ -262,7 +264,8 @@ class Wordref:
                 entry.sentences.extend(list(sentences))
 
 
-if __name__ == "__main__":
+def main() -> None:
+    """For testing only."""
     wr = Wordref(
         word=None,
         gr_en=True,
@@ -272,3 +275,7 @@ if __name__ == "__main__":
     )
     entry = wr.try_fetch_entry()
     print(entry)
+
+
+if __name__ == "__main__":
+    main()
