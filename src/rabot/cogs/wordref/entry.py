@@ -1,6 +1,7 @@
 import pprint
 import urllib
 import urllib.parse
+from dataclasses import dataclass
 
 import discord
 
@@ -8,34 +9,26 @@ from rabot.cogs.wordref.longest import highlight_synonyms
 from rabot.log import logger
 
 
+@dataclass
 class Entry:
     """Container class where the suitability logic and formatting is done."""
 
-    def __init__(
-        self,
-        link: str,
-        gr_word: str,
-        gr_en: bool,
-        hide_words: bool,
-        min_sentences_shown: int,
-        max_sentences_shown: int,
-        is_random: bool,
-    ):
-        self.link = link
-        self.gr_word = gr_word
-        self.gr_en = gr_en
-        self.hide_words = hide_words
-        self.min_sentences_shown = min_sentences_shown
-        self.max_sentences_shown = max_sentences_shown
-        self.is_random = is_random
+    link: str
+    gr_word: str
+    gr_en: bool
+    hide_words: bool
+    min_sentences_shown: int
+    max_sentences_shown: int
+    is_random: bool
 
+    def __post_init__(self) -> None:
+        """Extra attributes that we want to init separatedly."""
         self.en_word: str | None = None
-        self.gr_synonyms = set()
-        self.en_synonyms = set()
+        self.gr_synonyms: set[str] = set()
+        self.en_synonyms: set[str] = set()
         self.sentences: list[tuple[str, str]] = []
         self.gr_pos: str | None = None  # Parts of speech
-
-        self.embed = None
+        self.embed: discord.Embed | None = None
 
     @property
     def is_valid_entry(self) -> bool:
@@ -121,19 +114,17 @@ class Entry:
             # webbrowser.open_new(f"https://{encoded_url}")
             print(f"https://{encoded_url}")
 
-    def add_embed(
+    def get_embed(
         self,
         show_pos=True,
         show_translations=True,
         show_synonyms=False,
         show_sentences=True,
         show_footer=True,
-    ) -> None:
-        """Turns the entry into a Discord embed.
+    ) -> discord.Embed:
+        """Convert the entry into a Discord embed.
 
         https://plainenglish.io/blog/send-an-embed-with-a-discord-bot-in-python
-
-        Stores it to self.embed to avoid repeated calls.
         """
         # self.debug()
 
@@ -198,7 +189,24 @@ class Entry:
             footer += f"https://forvo.com/word/{self.gr_word}/#el"
             embed.set_footer(text=footer)
 
-        self.embed = embed
+        return embed
+
+    def add_embed(
+        self,
+        show_pos=True,
+        show_translations=True,
+        show_synonyms=False,
+        show_sentences=True,
+        show_footer=True,
+    ) -> None:
+        """Get and store the embed to avoid repeated calls."""
+        self.embed = self.get_embed(
+            show_pos,
+            show_translations,
+            show_synonyms,
+            show_sentences,
+            show_footer,
+        )
 
     def __str__(self):
         return pprint.pformat(vars(self), indent=1)
