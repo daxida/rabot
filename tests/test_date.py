@@ -3,7 +3,7 @@ from datetime import datetime
 from rabot.cogs.gr_datetime.gr_date import get_date, get_full_date, get_hour
 
 
-def _test_date(dt, expected_d, expected_h) -> None:
+def _test_date(dt: datetime, expected_d: str, expected_h: str) -> None:
     d = get_date(dt)
     h = get_hour(dt)
     dh = get_full_date(dt)

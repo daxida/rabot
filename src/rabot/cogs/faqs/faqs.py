@@ -45,7 +45,7 @@ Examples:
 - `k!q mem5` (Memrise first 5k words by frequency)
 - `k!q mem1` (Memrise first 1k words by frequency)
 - `k!q apl` (Aorist Passive verbs)
-- `k!q aal` (Aorist Active verbs) 
+- `k!q aal` (Aorist Active verbs)
 - `k!q wd` (Words that appeared in 📅-word-of-the-day channel.
 """,
     },

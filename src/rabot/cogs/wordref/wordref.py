@@ -155,7 +155,7 @@ class Wordref:
 
         return entry
 
-    def fetch_accented_word(self, soup) -> str:
+    def fetch_accented_word(self, soup: BeautifulSoup) -> str:
         """Fetch the accented word in case of non-accented input.
 
         Relies on wordref.com doing the dirty job of figuring it out for us."""

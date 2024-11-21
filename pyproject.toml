@@ -37,4 +37,14 @@ select = [
     "I",    # isort
     "N",    # pep8-naming
     "F",    # Pyflakes rules
+    "ANN",
+]
+ignore = [
+    "ANN401",
+]
+
+[tool.ruff.lint.per-file-ignores]
+"**/faqs.py" = [
+    # Allow loooooong strings
+    "E501",
 ]

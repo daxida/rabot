@@ -36,11 +36,9 @@ class MyClient(discord.Client):
 
         # Faq commands
         if mtch := RABOT_CMD_RE.match(message.content):
-            await handle_command(message.channel, mtch.group(1))
-
-
-async def handle_command(channel, cmd: str) -> None:
-    await channel.send(embed=get_faq(cmd))
+            cmd = mtch.group(1)
+            logger.debug(f"Rabot command: '{cmd}'")
+            await message.channel.send(embed=get_faq(cmd))
 
 
 intents = discord.Intents.default()
@@ -179,7 +177,7 @@ async def conj(interaction: discord.Interaction, word: str) -> None:
             list_contents.append(page)
     n = len(list_contents)
 
-    async def get_page(page: int):
+    async def get_page(page: int) -> tuple[discord.Embed, int]:
         verb_tense, conjugation = list_contents[page - 1]
         emb = discord.Embed(title=word, description=f"{verb_tense}\n\n{conjugation}")
         emb.url = url

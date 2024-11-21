@@ -5,6 +5,8 @@ Returns as a JSON containing word types and entries
 TODO: Unify the parsing.
 """
 
+from __future__ import annotations
+
 from typing import Any
 
 import requests
@@ -40,7 +42,7 @@ class WiktionaryQuery:
     __slots__ = "language", "soup", "word"
 
     @classmethod
-    def create(cls, word: str, language: str, printable: bool = True):
+    def create(cls, word: str, language: str, printable: bool = True) -> WiktionaryQuery:
         # https://stackoverflow.com/questions/33128325/how-to-set-class-attribute-with-await-in-init
         self = cls()
         self.word = word
@@ -276,6 +278,8 @@ def _parse_conjugation_table_two(query: WiktionaryQuery) -> dict[str, str] | Non
 
     This usally covers defective verbs.
     """
+    # TODO: make this consistent with conj table one!
+
     logger.info("Trying to fetch table structure two.")
 
     main_content = query.soup.find("div", {"class": "mw-content-ltr mw-parser-output"})

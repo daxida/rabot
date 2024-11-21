@@ -6,6 +6,7 @@ from dataclasses import dataclass
 import discord
 
 from rabot.cogs.wordref.longest import highlight_synonyms
+from rabot.exceptions import RabotError
 from rabot.log import logger
 
 
@@ -116,11 +117,11 @@ class Entry:
 
     def get_embed(
         self,
-        show_pos=True,
-        show_translations=True,
-        show_synonyms=False,
-        show_sentences=True,
-        show_footer=True,
+        show_pos: bool = True,
+        show_translations: bool = True,
+        show_synonyms: bool = False,
+        show_sentences: bool = True,
+        show_footer: bool = True,
     ) -> discord.Embed:
         """Convert the entry into a Discord embed.
 
@@ -132,6 +133,8 @@ class Entry:
             pos = f" - *{self.gr_pos}*" if self.gr_pos else ""
         else:
             # Swap gr and en
+            if self.en_word is None:
+                raise RabotError
             self.gr_word, self.en_word = self.en_word, self.gr_word
             self.sentences = [(esen, gsen) for gsen, esen in self.sentences]
             pos = ""
@@ -193,11 +196,11 @@ class Entry:
 
     def add_embed(
         self,
-        show_pos=True,
-        show_translations=True,
-        show_synonyms=False,
-        show_sentences=True,
-        show_footer=True,
+        show_pos: bool = True,
+        show_translations: bool = True,
+        show_synonyms: bool = False,
+        show_sentences: bool = True,
+        show_footer: bool = True,
     ) -> None:
         """Get and store the embed to avoid repeated calls."""
         self.embed = self.get_embed(
