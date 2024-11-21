@@ -6,7 +6,6 @@ from bs4 import BeautifulSoup
 from discord import Embed
 
 from rabot.cogs.wordref.entry import Entry
-from rabot.exceptions import RabotError
 from rabot.log import logger
 from rabot.utils import is_english
 

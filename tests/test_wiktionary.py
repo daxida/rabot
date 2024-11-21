@@ -17,7 +17,7 @@ async def fetch_wiktionary_pos_async(word: str, language: str) -> dict[str, list
 
 
 @pytest.mark.asyncio
-async def test_wiktionary_fetch_conjugation():
+async def test_wiktionary_fetch_conjugation() -> None:
     """A simple concurrent async test.
 
     This uses no cache and sends quite some requests to wiktionary. Use carefully.
@@ -51,7 +51,7 @@ async def test_wiktionary_fetch_conjugation():
 
 
 @pytest.mark.asyncio
-async def test_wiktionary_fetch_word_greek():
+async def test_wiktionary_fetch_word_greek() -> None:
     language = "greek"
     fixture_el = ["τραπέζι", "εστιατόριο"]
     tasks = [fetch_wiktionary_pos_async(word, language) for word in fixture_el]
@@ -62,7 +62,7 @@ async def test_wiktionary_fetch_word_greek():
 
 
 @pytest.mark.asyncio
-async def test_wiktionary_fetch_word_english():
+async def test_wiktionary_fetch_word_english() -> None:
     language = "english"
     fixture_el = ["table", "restaurant"]
     tasks = [fetch_wiktionary_pos_async(word, language) for word in fixture_el]

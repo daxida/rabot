@@ -3,7 +3,7 @@ from datetime import datetime
 from rabot.cogs.gr_datetime.gr_date import get_date, get_full_date, get_hour
 
 
-def _test_date(dt, expected_d, expected_h):
+def _test_date(dt, expected_d, expected_h) -> None:
     d = get_date(dt)
     h = get_hour(dt)
     dh = get_full_date(dt)
@@ -13,7 +13,7 @@ def _test_date(dt, expected_d, expected_h):
     assert dh == f"{expected_d} {expected_h}"
 
 
-def test_date_one():
+def test_date_one() -> None:
     dt = datetime(2022, 12, 25, 15, 30)
     expected_d = (
         "Καλημέρα. Σήμερα η μέρα, εδώ που μένω εγώ, "
@@ -23,7 +23,7 @@ def test_date_one():
     _test_date(dt, expected_d, expected_h)
 
 
-def test_date_two():
+def test_date_two() -> None:
     dt = datetime(1999, 7, 20, 6, 45, 12)
     expected_d = (
         "Καλημέρα. Σήμερα η μέρα, εδώ που μένω εγώ, "

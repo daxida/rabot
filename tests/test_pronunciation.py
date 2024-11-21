@@ -3,13 +3,13 @@ from rabot.exceptions import NotFoundError
 from rabot.utils import fix_greek_spelling
 
 
-def test_existing_pronunciation():
+def test_existing_pronunciation() -> None:
     word = "ευχαριστώ"
     message, _ = get_pronunciation(word)
     assert message == "Word: ευχαριστώ\nIPA: ef.xa.ɾiˈsto\n"
 
 
-def test_non_existing_pronunciation():
+def test_non_existing_pronunciation() -> None:
     word = "μπλαμπλα"
     try:
         get_pronunciation(word)
@@ -20,7 +20,7 @@ def test_non_existing_pronunciation():
         assert False, f"Expected NotFoundException but got {type(e).__name__}"
 
 
-def test_retry_pronunciation():
+def test_retry_pronunciation() -> None:
     word = "ευχαριστω"
     try:
         get_pronunciation(word)

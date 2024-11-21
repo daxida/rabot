@@ -53,7 +53,7 @@ def get_language_code(language: str) -> str:
             raise NotImplementedError(f"Language {language} is not supported")
 
 
-def print_json(obj):
+def print_json(obj) -> None:
     print(json.dumps(obj, indent=2, ensure_ascii=False))
 
 
@@ -100,7 +100,7 @@ def fix_greek_spelling(word: str) -> str:
 
 # https://stackoverflow.com/questions/76247812/how-to-create-pagination-embed-menu-in-discord-py
 class Pagination(discord.ui.View):
-    def __init__(self, interaction: discord.Interaction, get_page: Callable):
+    def __init__(self, interaction: discord.Interaction, get_page: Callable) -> None:
         self.interaction = interaction
         self.get_page = get_page
         self.total_pages: int = 0
@@ -117,7 +117,7 @@ class Pagination(discord.ui.View):
         await interaction.response.send_message(embed=emb, ephemeral=True)
         return False
 
-    async def navigate(self):
+    async def navigate(self) -> None:
         emb, self.total_pages = await self.get_page(self.index)
         assert self.total_pages > 0
 
@@ -127,12 +127,12 @@ class Pagination(discord.ui.View):
             self.update_buttons()
             await self.interaction.response.send_message(embed=emb, view=self)
 
-    async def edit_page(self, interaction: discord.Interaction):
+    async def edit_page(self, interaction: discord.Interaction) -> None:
         emb, self.total_pages = await self.get_page(self.index)
         self.update_buttons()
         await interaction.response.edit_message(embed=emb, view=self)
 
-    def update_buttons(self):
+    def update_buttons(self) -> None:
         if self.index > self.total_pages // 2:
             self.children[2].emoji = "⏮️"
         else:
@@ -141,24 +141,24 @@ class Pagination(discord.ui.View):
         self.children[1].disabled = self.index == self.total_pages
 
     @discord.ui.button(emoji="◀️", style=discord.ButtonStyle.blurple)
-    async def previous(self, interaction: discord.Interaction, button: discord.Button):
+    async def previous(self, interaction: discord.Interaction, button: discord.Button) -> None:
         self.index -= 1
         await self.edit_page(interaction)
 
     @discord.ui.button(emoji="▶️", style=discord.ButtonStyle.blurple)
-    async def next(self, interaction: discord.Interaction, button: discord.Button):
+    async def next(self, interaction: discord.Interaction, button: discord.Button) -> None:
         self.index += 1
         await self.edit_page(interaction)
 
     @discord.ui.button(emoji="⏭️", style=discord.ButtonStyle.blurple)
-    async def end(self, interaction: discord.Interaction, button: discord.Button):
+    async def end(self, interaction: discord.Interaction, button: discord.Button) -> None:
         if self.index <= self.total_pages // 2:
             self.index = self.total_pages
         else:
             self.index = 1
         await self.edit_page(interaction)
 
-    async def on_timeout(self):
+    async def on_timeout(self) -> None:
         # remove buttons on timeout
         message = await self.interaction.original_response()
         await message.edit(view=None)

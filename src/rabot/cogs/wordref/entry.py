@@ -208,5 +208,5 @@ class Entry:
             show_footer,
         )
 
-    def __str__(self):
+    def __str__(self) -> str:
         return pprint.pformat(vars(self), indent=1)

@@ -56,7 +56,7 @@ async def templ_wordref(
     hide_words: bool,
     min_sentences_shown: int,
     max_sentences_shown: int,
-):
+) -> None:
     """Template for wordref commands."""
     wordref = Wordref(word, gr_en, hide_words, min_sentences_shown, max_sentences_shown)
     wordref_embed = wordref.fetch_embed()
@@ -83,7 +83,7 @@ async def templ_wordref(
 
 async def templ_wiktionary(
     interaction: discord.Interaction, word: str, language: str, *, ephemeral: str = "True"
-):
+) -> None:
     """Template for wiktionary commands."""
     eph = ephemeral.lower() in ["true", "yes", "1"]
     embeds = await wiktionary_message(word, language)
@@ -95,42 +95,42 @@ async def templ_wiktionary(
 
 
 @tree.command(name="wiktionary", description="Return the Wiktionary (English) entry for a word")
-async def wiktionary(interaction: discord.Interaction, word: str, ephemeral: str = "True"):
+async def wiktionary(interaction: discord.Interaction, word: str, ephemeral: str = "True") -> None:
     await templ_wiktionary(interaction, word, language="english", ephemeral=ephemeral)
 
 
 @tree.command(name="wiktionarygr", description="Return the Wiktionary (Greek) entry for a word")
-async def wiktionarygr(interaction: discord.Interaction, word: str, ephemeral: str = "True"):
+async def wiktionarygr(interaction: discord.Interaction, word: str, ephemeral: str = "True") -> None:
     await templ_wiktionary(interaction, word, language="greek", ephemeral=ephemeral)
 
 
 @tree.command(name="wotdgr", description="Prompts a random Greek word from Wordref")
-async def wotdgr(interaction: discord.Interaction):
+async def wotdgr(interaction: discord.Interaction) -> None:
     await templ_wordref(interaction, None, True, True, 1, 3)
 
 
 @tree.command(name="wotden", description="Prompts a random english word from Wordref")
-async def wotden(interaction: discord.Interaction):
+async def wotden(interaction: discord.Interaction) -> None:
     await templ_wordref(interaction, None, False, True, 1, 3)
 
 
 @tree.command(name="searchgr", description="Searches the given Greek word in Wordref (supports greeklish)")
-async def searchgr(interaction: discord.Interaction, word: str):
+async def searchgr(interaction: discord.Interaction, word: str) -> None:
     await templ_wordref(interaction, word, True, False, 0, 2)
 
 
 @tree.command(name="searchen", description="Searches the given english word in Wordref")
-async def searchen(interaction: discord.Interaction, word: str):
+async def searchen(interaction: discord.Interaction, word: str) -> None:
     await templ_wordref(interaction, word, False, False, 0, 2)
 
 
 @tree.command(name="date", description="Prompts date in Fidis format")
-async def date(interaction: discord.Interaction):
+async def date(interaction: discord.Interaction) -> None:
     await interaction.response.send_message(get_full_date())
 
 
 @tree.command(name="forvo", description="Returns a link with a forvo pronunciation")
-async def forvo(interaction: discord.Interaction, word: str):
+async def forvo(interaction: discord.Interaction, word: str) -> None:
     # We do not always want to fix the greek spelling because valid words may be
     # modified by the query to `fix_greek_spelling`: ταξίδια => ταξίδι.
 
@@ -150,7 +150,7 @@ async def forvo(interaction: discord.Interaction, word: str):
 
 
 @tree.command(name="conj", description="Returns the present tense of the verb.")
-async def conj(interaction: discord.Interaction, word: str):
+async def conj(interaction: discord.Interaction, word: str) -> None:
     try:
         conjugation = fetch_conjugation(word)
         if conjugation is None:

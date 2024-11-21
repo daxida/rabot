@@ -1,7 +1,7 @@
 from rabot.cogs.wordref.wordref import Wordref
 
 
-def test_wordref():
+def test_wordref() -> None:
     word = "ημερήσιος"
     gr_en = True
     hide_words = True
