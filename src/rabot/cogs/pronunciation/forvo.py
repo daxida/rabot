@@ -8,21 +8,15 @@ import time
 import urllib.parse
 import urllib.request
 from dataclasses import dataclass
-from typing import List, Union
 from urllib.error import HTTPError
 
 import requests
 from bs4 import BeautifulSoup
 
 from rabot.exceptions import NotFoundError
+from rabot.log import logger
 
-search_url = "https://forvo.com/word/"
-download_url = "https://forvo.com/download/mp3/"
-
-
-def log_debug(msg):
-    # print(msg)
-    pass
+LANG_CONTAINER_RE = re.compile(r"language-container-(\w{2,4})")
 
 
 @dataclass
@@ -35,7 +29,7 @@ class Pronunciation:
     download_url: str
     is_ogg: bool
     word: str
-    audio: Union[str, None] = None
+    # audio: str | None = None
 
 
 HEADERS = [
@@ -54,72 +48,67 @@ HEADERS = [
 
 
 class Forvo:
-    def __init__(self, word: str, language: str):
-        self.html: BeautifulSoup
+    SEARCH_URL = "https://forvo.com/word/"
+
+    def __init__(self, word: str, language: str) -> None:
         self.language = language
-        word = word.strip()
-        log_debug("[Forvo.py] Using search query: %s" % word)
-        self.word = word
-        self.pronunciations: List[Pronunciation] = []
+        self.word = word.strip()
+        logger.debug("[Forvo.py] Using search query: %s" % self.word)
+
+        self.soup: BeautifulSoup
+        self.pronunciations: list[Pronunciation] = []
 
         # Set a user agent so that Forvo/CloudFlare lets us access the page
         opener = urllib.request.build_opener()
-
         opener.addheaders = HEADERS
         urllib.request.install_opener(opener)
 
-    def load_search_query(self):
-        """Retries only in case of 403: Forbidden."""
+    def fetch_soup(self) -> None:
+        """Fetch Forvo's html and soup it.
+
+        Retries only in case of 403: Forbidden.
+        """
         for _ in range(3):
             try:
-                self._load_search_query()
+                self.soup = self._fetch_soup()
+                logger.success(f"Fetched html for {self.word}")
+                break
             except HTTPError as e:
                 if e.code != 403:
                     raise e
+                logger.error(e)
                 time.sleep(0.5)
 
-    def _load_search_query(self):
-        """Loads the search result page on Forvo"""
+    def _fetch_soup(self) -> BeautifulSoup:
         try:
-            log_debug("[Forvo.py] Reading result page")
-            page = urllib.request.urlopen(url=search_url + urllib.parse.quote_plus(self.word)).read()
-            log_debug("[Forvo.py] Done with reading result page")
-
-            log_debug("[Forvo.py] Initializing BS4")
-            self.html = BeautifulSoup(page, "html.parser")
-            log_debug("[Forvo.py] Initialized BS4")
+            url = Forvo.SEARCH_URL + urllib.parse.quote_plus(self.word)
+            logger.debug(f"[Forvo.py] GET {url}")
+            page = urllib.request.urlopen(url=url).read()
+            return BeautifulSoup(page, "html.parser")
         except HTTPError as e:
-            log_debug(f"[Forvo.py] HTTPError: {e}")
+            logger.debug(f"[Forvo.py] HTTPError: {e}")
             if e.code == 404:
                 raise NotFoundError()
-            # Sometimes we can get 403: Forbidden
-            raise e
-        except Exception as e:
-            log_debug("[Forvo.py] Exception: " + str(e))
             raise e
 
-    def get_pronunciations(self):
-        """Creates pronunciation objects from the soup"""
-        log_debug("[Forvo.py] Searching language containers")
-        available_langs_el = self.html.find_all(id=re.compile(r"language-container-\w{2,4}"))
-        log_debug("[Forvo.py] Done searching language containers")
-        log_debug("[Forvo.py] Compiling list of available langs")
-        available_langs = [
-            re.findall(r"language-container-(\w{2,4})", el.attrs["id"])[0] for el in available_langs_el
-        ]
+    def get_pronunciations(self) -> None:
+        """Populates self.pronunciations from the stored soup's."""
+        available_langs_el = self.soup.find_all(id=LANG_CONTAINER_RE)
+        logger.debug("[Forvo.py] Done searching language containers")
+
+        available_langs = [LANG_CONTAINER_RE.findall(el.attrs["id"])[0] for el in available_langs_el]
         if self.language not in available_langs:
-            raise NotFoundError()
-        log_debug("[Forvo.py] Done compiling list of available langs")
+            raise NotFoundError
+        logger.debug("[Forvo.py] Done compiling list of available langs")
 
-        log_debug("[Forvo.py] Searching lang container")
         lang_container = [
             lang
             for lang in available_langs_el
-            if re.findall(r"language-container-(\w{2,4})", lang.attrs["id"])[0] == self.language
+            if LANG_CONTAINER_RE.findall(lang.attrs["id"])[0] == self.language
         ][0]
-        log_debug("[Forvo.py] Done searching lang container")
+        logger.debug("[Forvo.py] Done searching lang container")
 
-        log_debug("[Forvo.py] Going through all pronunciations")
+        logger.debug("[Forvo.py] Going through all pronunciations")
         for accents in lang_container.find_all(class_="pronunciations")[0].find_all(
             class_="pronunciations-list",
         ):
@@ -196,18 +185,27 @@ class Forvo:
                         ),
                     )
 
-        return self
-
 
 def get_forvo_pronunciation_audio(word: str) -> io.BytesIO:
-    """Can raise if 404: NotFound, or 403: Forbidden"""
-    f = Forvo(word, "el")
-    f.load_search_query()
-    f.get_pronunciations()
+    """Return a random pronunciation of the word.
+
+    Can raise if 404: NotFound, or 403: Forbidden.
+    """
+    fv = Forvo(word, "el")
+    fv.fetch_soup()
+    fv.get_pronunciations()
 
     # pronunciation = f.pronunciations[0]
-    pronunciation = random.choice(f.pronunciations)
+    pronunciation = random.choice(fv.pronunciations)
     response = requests.get(pronunciation.download_url, headers=dict(HEADERS))
     audio_file = io.BytesIO(response.content)
 
     return audio_file
+
+
+if __name__ == "__main__":
+    """For testing only."""
+    fv = Forvo("καλημέρα", "el")
+    fv.fetch_soup()
+    fv.get_pronunciations()
+    print(fv.pronunciations)
