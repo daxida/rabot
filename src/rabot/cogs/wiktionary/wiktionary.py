@@ -157,7 +157,7 @@ def parse_deite_suggestions(query: WiktionaryQuery) -> list[str]:
         ["li"],
     ]
 
-    for search in to_search:  # pyright: ignore
+    for search in to_search:
         for div in query.soup.find_all(search):
             if any(d in div.text for d in deite):
                 links = div.find_all("a", title=True)
@@ -269,7 +269,7 @@ def _parse_conjugation_table_one(query: WiktionaryQuery) -> ConjugationDict:
     return parsed
 
 
-def _parse_conjugation_table_two(query: WiktionaryQuery) -> dict[str, str] | None:
+def _parse_conjugation_table_two(query: WiktionaryQuery) -> ConjugationDict:
     """Try fetching the non-standard table structure.
 
     https://el.wiktionary.org/wiki/ξέρω?printable=yes
@@ -321,15 +321,14 @@ def _parse_conjugation_table_two(query: WiktionaryQuery) -> dict[str, str] | Non
     height = len(voice_data)
     assert height == 7, f"Expected height to be 7, but got {height}."
 
-    # Copy pasted
+    # Copy pasted from table one
     parsed: dict[str, list[str]] = dict()
-    # Take the transpose
     for col in zip(*voice_data):
         parsed[col[0]] = list(col[1:])
 
     relevant_tenses = ["Ενεστώτας", "Παρατατικός"]
 
-    relevant_parsed = {tense: "\n".join(parsed[tense]) for tense in relevant_tenses}
+    relevant_parsed = {"Ενεργητική φωνή": {tense: parsed[tense] for tense in relevant_tenses}}
 
     return relevant_parsed
 
