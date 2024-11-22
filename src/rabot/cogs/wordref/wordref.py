@@ -265,8 +265,12 @@ class Wordref:
 
 def main() -> None:
     """For testing only."""
+    import sys
+
+    word = sys.argv[1].strip() if len(sys.argv) > 1 else None
+
     wr = Wordref(
-        word=None,
+        word=word,
         gr_en=True,
         hide_words=False,
         min_sentences_shown=1,
