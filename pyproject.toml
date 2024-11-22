@@ -28,7 +28,7 @@ wordref = "rabot.cogs.wordref.wordref:main"
 asyncio_default_fixture_loop_scope = "function"
 
 [tool.ruff]
-line-length = 110
+line-length = 100
 output-format = "concise"
 
 [tool.ruff.lint]

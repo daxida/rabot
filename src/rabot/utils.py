@@ -10,7 +10,7 @@ GREEKLISH = str.maketrans(
     {
         "a": "α",
         "b": "β",
-        "c": "σ",  # There's no direct equivalent for 'c' in Greek, but 'σ' is commonly used in borrowed words
+        "c": "σ",  # There's no equivalent for 'c' in Greek, but 'σ' is commonly used
         "d": "δ",
         "e": "ε",
         "f": "φ",
@@ -93,21 +93,21 @@ def fix_greek_spelling(word: str) -> str:
 
 # https://stackoverflow.com/questions/76247812/how-to-create-pagination-embed-menu-in-discord-py
 class Pagination(discord.ui.View):
-    def __init__(self, interaction: discord.Interaction, get_page: Callable) -> None:
-        self.interaction = interaction
+    def __init__(self, inter: discord.Interaction, get_page: Callable) -> None:
+        self.inter = inter
         self.get_page = get_page
         self.total_pages: int = 0
         self.index: int = 1
         super().__init__(timeout=100)
 
-    async def interaction_check(self, interaction: discord.Interaction) -> bool:
-        if interaction.user == self.interaction.user:
+    async def interaction_check(self, inter: discord.Interaction) -> bool:
+        if inter.user == self.inter.user:
             return True
         emb = discord.Embed(
             description="Only the author of the command can perform this action.",
             color=16711680,
         )
-        await interaction.response.send_message(embed=emb, ephemeral=True)
+        await inter.response.send_message(embed=emb, ephemeral=True)
         return False
 
     async def navigate(self) -> None:
@@ -115,15 +115,15 @@ class Pagination(discord.ui.View):
         assert self.total_pages > 0
 
         if self.total_pages == 1:
-            await self.interaction.response.send_message(embed=emb)
+            await self.inter.response.send_message(embed=emb)
         elif self.total_pages > 1:
             self.update_buttons()
-            await self.interaction.response.send_message(embed=emb, view=self)
+            await self.inter.response.send_message(embed=emb, view=self)
 
-    async def edit_page(self, interaction: discord.Interaction) -> None:
+    async def edit_page(self, inter: discord.Interaction) -> None:
         emb, self.total_pages = await self.get_page(self.index)
         self.update_buttons()
-        await interaction.response.edit_message(embed=emb, view=self)
+        await inter.response.edit_message(embed=emb, view=self)
 
     def update_buttons(self) -> None:
         if self.index > self.total_pages // 2:
@@ -134,14 +134,14 @@ class Pagination(discord.ui.View):
         self.children[1].disabled = self.index == self.total_pages
 
     @discord.ui.button(emoji="◀️", style=discord.ButtonStyle.blurple)
-    async def previous(self, interaction: discord.Interaction, button: discord.Button) -> None:
+    async def previous(self, inter: discord.Interaction, button: discord.Button) -> None:
         self.index -= 1
-        await self.edit_page(interaction)
+        await self.edit_page(inter)
 
     @discord.ui.button(emoji="▶️", style=discord.ButtonStyle.blurple)
-    async def next(self, interaction: discord.Interaction, button: discord.Button) -> None:
+    async def next(self, inter: discord.Interaction, button: discord.Button) -> None:
         self.index += 1
-        await self.edit_page(interaction)
+        await self.edit_page(inter)
 
     @discord.ui.button(emoji="⏭️", style=discord.ButtonStyle.blurple)
     async def end(self, interaction: discord.Interaction, button: discord.Button) -> None:
@@ -152,8 +152,8 @@ class Pagination(discord.ui.View):
         await self.edit_page(interaction)
 
     async def on_timeout(self) -> None:
-        # remove buttons on timeout
-        message = await self.interaction.original_response()
+        """Remove buttons on timeout."""
+        message = await self.inter.original_response()
         await message.edit(view=None)
 
     @staticmethod

@@ -67,16 +67,16 @@ class WiktionaryQuery:
         """Mutates soup to remove ancient greek elements."""
         if language == "english":
             remove_string = "Ancient_Greek"
-            stop_at_string = "Greek"
+            stop_at = "Greek"
         else:
             remove_string = "Αρχαία_ελληνικά_(grc)"
-            stop_at_string = None
+            stop_at = None
 
         if tag_to_remove := soup.find("h2", id=remove_string):
             current_element = tag_to_remove.find_parent()
             while current_element:
                 next_sibling = current_element.find_next_sibling()
-                if next_sibling and stop_at_string and next_sibling.find("h2", string=stop_at_string):
+                if next_sibling and stop_at and next_sibling.find("h2", string=stop_at):
                     break
 
                 # remove the current element and move to next sibling

@@ -2,7 +2,11 @@ import asyncio
 
 import pytest
 
-from rabot.cogs.wiktionary.wiktionary import ConjugationDict, fetch_conjugation, fetch_wiktionary_pos
+from rabot.cogs.wiktionary.wiktionary import (
+    ConjugationDict,
+    fetch_conjugation,
+    fetch_wiktionary_pos,
+)
 
 # https://stackoverflow.com/questions/70015634/how-to-test-async-function-using-pytest
 pytest_plugins = ("pytest_asyncio",)

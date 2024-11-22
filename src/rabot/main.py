@@ -48,7 +48,7 @@ tree = app_commands.CommandTree(client)
 
 
 async def templ_wordref(
-    interaction: discord.Interaction,
+    inter: discord.Interaction,
     word: str | None,
     gr_en: bool,
     hide_words: bool,
@@ -68,67 +68,67 @@ async def templ_wordref(
         wordref_embed = wordref.fetch_embed()
 
     if wordref_embed is None:
-        await interaction.response.send_message("The command did not succeed.")
+        await inter.response.send_message("The command did not succeed.")
     else:
-        await interaction.response.send_message(embed=wordref_embed)
+        await inter.response.send_message(embed=wordref_embed)
     # try:
     #     wordref = Wordref(word, gr_en, hide_words, amount_sentences_shown)
     #     wordref_embed = wordref.embed()
-    #     await interaction.response.send_message(embed=wordref_embed)
+    #     await inter.response.send_message(embed=wordref_embed)
     # except Exception as e:
-    #     await interaction.response.send_message(content=f"Error: {e}")
+    #     await inter.response.send_message(content=f"Error: {e}")
 
 
 async def templ_wiktionary(
-    interaction: discord.Interaction, word: str, language: str, *, ephemeral: str = "True"
+    inter: discord.Interaction, word: str, language: str, *, ephemeral: str = "True"
 ) -> None:
     """Template for wiktionary commands."""
     eph = ephemeral.lower() in ["true", "yes", "1"]
     embeds = await wiktionary_message(word, language)
 
-    await interaction.response.send_message(embed=embeds[0], ephemeral=eph)
+    await inter.response.send_message(embed=embeds[0], ephemeral=eph)
     if len(embeds) > 1:
         for embed in embeds[1:]:
-            await interaction.followup.send(embed=embed, ephemeral=eph)
+            await inter.followup.send(embed=embed, ephemeral=eph)
 
 
-@tree.command(name="wiktionary", description="Return the Wiktionary (English) entry for a word")
-async def wiktionary(interaction: discord.Interaction, word: str, ephemeral: str = "True") -> None:
-    await templ_wiktionary(interaction, word, language="english", ephemeral=ephemeral)
+@tree.command(name="wiktionary", description="Search an English word in Wiktionary")
+async def wiktionary(inter: discord.Interaction, word: str, ephemeral: str = "True") -> None:
+    await templ_wiktionary(inter, word, language="english", ephemeral=ephemeral)
 
 
-@tree.command(name="wiktionarygr", description="Return the Wiktionary (Greek) entry for a word")
-async def wiktionarygr(interaction: discord.Interaction, word: str, ephemeral: str = "True") -> None:
-    await templ_wiktionary(interaction, word, language="greek", ephemeral=ephemeral)
+@tree.command(name="wiktionarygr", description="Search a Greek word in Wiktionary")
+async def wiktionarygr(inter: discord.Interaction, word: str, ephemeral: str = "True") -> None:
+    await templ_wiktionary(inter, word, language="greek", ephemeral=ephemeral)
 
 
-@tree.command(name="wotdgr", description="Prompts a random Greek word from Wordref")
-async def wotdgr(interaction: discord.Interaction) -> None:
-    await templ_wordref(interaction, None, True, True, 1, 3)
+@tree.command(name="wotdgr", description="Search a random Greek word in Wordref")
+async def wotdgr(inter: discord.Interaction) -> None:
+    await templ_wordref(inter, None, True, True, 1, 3)
 
 
-@tree.command(name="wotden", description="Prompts a random english word from Wordref")
-async def wotden(interaction: discord.Interaction) -> None:
-    await templ_wordref(interaction, None, False, True, 1, 3)
+@tree.command(name="wotden", description="Search a random english word in Wordref")
+async def wotden(inter: discord.Interaction) -> None:
+    await templ_wordref(inter, None, False, True, 1, 3)
 
 
-@tree.command(name="searchgr", description="Searches the given Greek word in Wordref (supports greeklish)")
-async def searchgr(interaction: discord.Interaction, word: str) -> None:
-    await templ_wordref(interaction, word, True, False, 0, 2)
+@tree.command(name="searchgr", description="Search a Greek word in Wordref (supports greeklish)")
+async def searchgr(inter: discord.Interaction, word: str) -> None:
+    await templ_wordref(inter, word, True, False, 0, 2)
 
 
-@tree.command(name="searchen", description="Searches the given english word in Wordref")
-async def searchen(interaction: discord.Interaction, word: str) -> None:
-    await templ_wordref(interaction, word, False, False, 0, 2)
+@tree.command(name="searchen", description="Search an English word in Wordref")
+async def searchen(inter: discord.Interaction, word: str) -> None:
+    await templ_wordref(inter, word, False, False, 0, 2)
 
 
-@tree.command(name="date", description="Prompts date in Fidis format")
-async def date(interaction: discord.Interaction) -> None:
-    await interaction.response.send_message(get_full_date())
+@tree.command(name="date", description="Prompt date in Fidis format")
+async def date(inter: discord.Interaction) -> None:
+    await inter.response.send_message(get_full_date())
 
 
-@tree.command(name="forvo", description="Returns a link with a forvo pronunciation")
-async def forvo(interaction: discord.Interaction, word: str) -> None:
+@tree.command(name="forvo", description="Search a Greek word pronunciation in forvo")
+async def forvo(inter: discord.Interaction, word: str) -> None:
     # We do not always want to fix the greek spelling because valid words may be
     # modified by the query to `fix_greek_spelling`: ταξίδια => ταξίδι.
 
@@ -140,15 +140,15 @@ async def forvo(interaction: discord.Interaction, word: str) -> None:
         try:
             message, audio_file = pronunciation.get_pronunciation(word)
         except NotFoundError:
-            await interaction.response.send_message(f"Could not find the word {word}!")
+            await inter.response.send_message(f"Could not find the word {word}!")
             return
 
     file = discord.File(audio_file, filename=f"{word}.mp3")
-    await interaction.response.send_message(file=file, content=message)
+    await inter.response.send_message(file=file, content=message)
 
 
-@tree.command(name="conj", description="Returns the present tense of the verb.")
-async def conj(interaction: discord.Interaction, word: str) -> None:
+@tree.command(name="conj", description="Get the present tense of the verb")
+async def conj(inter: discord.Interaction, word: str) -> None:
     try:
         conjugation = fetch_conjugation(word)
         if conjugation is None:
@@ -157,15 +157,15 @@ async def conj(interaction: discord.Interaction, word: str) -> None:
                 conjugation = fetch_conjugation(word)
     except RabotError as e:
         logger.critical(e)
-        await interaction.response.send_message(f"Error while fetching conjugation for {word}.")
+        await inter.response.send_message(f"Error while fetching conjugation for {word}.")
         return
     except HTTPError as e:
         logger.error(e)
-        await interaction.response.send_message(f"Error while fetching conjugation for {word}.")
+        await inter.response.send_message(f"Error while fetching conjugation for {word}.")
         return
 
     if conjugation is None:
-        await interaction.response.send_message(f"Could not find conjugation for {word}.")
+        await inter.response.send_message(f"Could not find conjugation for {word}.")
         return
 
     url = f"https://el.wiktionary.org/wiki/{word}"
@@ -181,11 +181,11 @@ async def conj(interaction: discord.Interaction, word: str) -> None:
         verb_tense, conjugation = list_contents[page - 1]
         emb = discord.Embed(title=word, description=f"{verb_tense}\n\n{conjugation}")
         emb.url = url
-        # emb.set_author(name=f"Requested by {interaction.user}")
+        # emb.set_author(name=f"Requested by {inter.user}")
         emb.set_footer(text=f"Page {page} from {n}")
         return emb, n
 
-    await Pagination(interaction, get_page).navigate()
+    await Pagination(inter, get_page).navigate()
 
 
 def main() -> None:

@@ -96,7 +96,9 @@ class Forvo:
         available_langs_el = self.soup.find_all(id=LANG_CONTAINER_RE)
         logger.debug("[Forvo.py] Done searching language containers")
 
-        available_langs = [LANG_CONTAINER_RE.findall(el.attrs["id"])[0] for el in available_langs_el]
+        available_langs = [
+            LANG_CONTAINER_RE.findall(el.attrs["id"])[0] for el in available_langs_el
+        ]
         if self.language not in available_langs:
             raise NotFoundError
         logger.debug("[Forvo.py] Done compiling list of available langs")
@@ -127,7 +129,9 @@ class Forvo:
                 if len(vote_count_inner_span) == 0:
                     vote_count = 0
                 else:
-                    vote_count = int(str(re.findall(r"(-?\d+).*", vote_count_inner_span[0].contents[0])[0]))
+                    vote_count = int(
+                        str(re.findall(r"(-?\d+).*", vote_count_inner_span[0].contents[0])[0])
+                    )
 
                 pronunciation_dls = re.findall(
                     r"Play\(\d+,'.+','.+',\w+,'([^']+)",
@@ -157,7 +161,11 @@ class Forvo:
                     lambda el: bool(el.find_all(string=re.compile("Pronunciation by"))),
                     class_="info",
                 )[0]
-                username = re.findall("Pronunciation by(.*)", author_info.get_text(" "), re.DOTALL)[0].strip()
+                username = re.findall(
+                    "Pronunciation by(.*)",
+                    author_info.get_text(" "),
+                    re.DOTALL,
+                )[0].strip()
                 # data-p* appears to be a way to define arguments for click event
                 # handlers; heuristic: if there's only one unique integer value,
                 # then it's the ID
