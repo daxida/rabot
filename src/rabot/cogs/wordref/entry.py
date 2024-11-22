@@ -1,6 +1,4 @@
 import pprint
-import urllib
-import urllib.parse
 from dataclasses import dataclass
 
 import discord
@@ -14,9 +12,10 @@ from rabot.log import logger
 class Entry:
     """Container class where the suitability logic and formatting is done."""
 
-    link: str
+    url: str
     gr_word: str
     gr_en: bool
+    # Whether to hide the translated pair when showing sentences.
     hide_words: bool
     min_sentences_shown: int
     max_sentences_shown: int
@@ -35,27 +34,27 @@ class Entry:
     def is_valid_entry(self) -> bool:
         word = self.gr_word
 
-        if not self.link:
-            logger.warning(f"Could not find the link for {word}.")
+        if not self.url:
+            logger.warning(f"Empty url for {word}.")
             return False
         if not self.gr_word:
-            logger.warning(f"Could not find the greek word for {word}.")
+            logger.warning(f"Empty greek word for {word}.")
             return False
         if not self.en_word:
-            logger.warning(f"Could not find the english word for {word}.")
+            logger.warning(f"Empty english word for {word}.")
             return False
         if not self.gr_synonyms:
-            logger.warning(f"Could not find a greek synonym for {word}.")
+            logger.warning(f"Empty greek synonyms for {word}.")
             return False
         if not self.en_synonyms:
-            logger.warning(f"Could not find an english synonym for {word}.")
+            logger.warning(f"Empty english synonyms for {word}.")
             return False
         if not len(self.sentences) >= self.min_sentences_shown:
-            logger.warning(f"Could not find enough sentences ({self.min_sentences_shown}) for {word}.")
+            logger.warning(f"Not enough sentences ({self.min_sentences_shown}) for {word}.")
             return False
 
         if not self.gr_pos:
-            logger.warning(f"Could not find POS for {word}.")
+            logger.warning(f"Empty POS for {word}.")
 
         return True
 
@@ -88,7 +87,7 @@ class Entry:
         self.sentences = sorted(self.sentences)
 
         msg = "\n"
-        msg += f"{self.link}\n"
+        msg += f"{self.url}\n"
         msg += "\n"
         msg += f"Greek word: --------- {self.gr_word}\n"
         msg += f"English word: ------- {self.en_word}\n"
@@ -106,14 +105,6 @@ class Entry:
             msg += f"> {idx + 1}: {highlight_synonyms(esen, self.en_synonyms)}\n"
 
         print(f"\033[33m{msg}\033[0m")
-
-        # Open the link in a new tab
-        open_website = False
-        if open_website:
-            clean_link = self.link.replace("https://", "")
-            encoded_url = urllib.parse.quote(f"{clean_link}")
-            # webbrowser.open_new(f"https://{encoded_url}")
-            print(f"https://{encoded_url}")
 
     def get_embed(
         self,
@@ -181,7 +172,7 @@ class Entry:
 
         embed = discord.Embed(
             title=title,
-            url=f"{self.link}",
+            url=self.url,
             description=description,
             color=0xFF5733,
         )
