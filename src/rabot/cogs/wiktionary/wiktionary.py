@@ -38,7 +38,7 @@ ENTRIES_EN = [
 
 
 class WiktionaryQuery:
-    __slots__ = "soup", "word"
+    __slots__ = "word", "soup"
 
     @classmethod
     def create(cls, word: str, *, language: str = "el") -> WiktionaryQuery:
@@ -384,7 +384,17 @@ def parse_entry(query: WiktionaryQuery, entry_id: str) -> list[str] | None:
     return entry_elements
 
 
+def main() -> None:
+    """For testing only."""
+    import sys
+
+    if len(sys.argv) > 1:
+        verb = sys.argv[1].strip()
+        conj = fetch_conjugation(verb)
+        pprint.pprint(conj, compact=True)
+    else:
+        print("No verb found. F.e. 'conj τρέχω'")
+
+
 if __name__ == "__main__":
-    query = WiktionaryQuery.create("τρέχω", language="el")
-    conj = fetch_conjugation("δημιουργώ")
-    pprint.pprint(conj, compact=True)
+    main()

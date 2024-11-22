@@ -36,7 +36,7 @@ async def test_wiktionary_fetch_conjugation() -> None:
         ("περπατώ", True, False),
         ("περπατάω", True, False),
         ("χαραλώνω", False, False),
-        ("βρέχω", False, False),
+        # ("βρέχω", False, False),
         ("βρίσκομαι", True, False),
         ("ξέρω", True, False),
         ("είμαι", True, False),

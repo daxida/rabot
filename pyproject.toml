@@ -23,6 +23,7 @@ dev = [
 rabot = "rabot.main:main"
 # Debugging entry points
 wordref = "rabot.cogs.wordref.wordref:main"
+conj = "rabot.cogs.wiktionary.wiktionary:main"
 
 [tool.pytest.ini_options]
 asyncio_default_fixture_loop_scope = "function"
