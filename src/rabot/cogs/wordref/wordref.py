@@ -6,6 +6,7 @@ from bs4 import BeautifulSoup
 from discord import Embed
 
 from rabot.cogs.wordref.entry import Entry
+from rabot.exceptions import RabotError
 from rabot.log import logger
 from rabot.utils import is_english
 
@@ -92,6 +93,12 @@ class Wordref:
 
         self.max_random_iterations = 5
 
+    def get_soup(self) -> BeautifulSoup:
+        logger.debug(f"GET {self.url}")
+        response = requests.get(self.url)
+        response.raise_for_status()
+        return BeautifulSoup(response.text, "html.parser")
+
     def fetch_embed(self) -> Embed | None:
         """Fetch an embed.
 
@@ -128,12 +135,11 @@ class Wordref:
         return entry.embed
 
     def try_fetch_entry(self) -> Entry:
-        logger.debug(f"GET {self.url}")
-        response = requests.get(self.url)
-        response.raise_for_status()
-        soup = BeautifulSoup(response.text, "html.parser")
-
-        self.word = self.fetch_accented_word(soup)
+        soup = self.get_soup()
+        if self.gr_en:
+            self.word = self.fetch_accented_word(soup)
+        if self.word is None:
+            raise RabotError("Not initialized word in Wordref")
 
         new_url = f"{Wordref.BASE_URL}/gren/{self.word}"  # Forced "gren"
         logger.debug(f"URL {new_url}")
@@ -148,7 +154,6 @@ class Wordref:
             self.is_random,
         )
 
-        logger.debug(f"Trying to fetch info for '{self.word}'")
         for res in soup.find_all("table", {"class": "WRD"}):
             self.try_fetch_word(res, entry)
             self.try_fetch_sentence_pairs(res, entry)
@@ -158,13 +163,17 @@ class Wordref:
     def fetch_accented_word(self, soup: BeautifulSoup) -> str:
         """Fetch the accented word in case of non-accented input.
 
-        Relies on wordref.com doing the dirty job of figuring it out for us."""
+        Relies on wordref.com doing the dirty job of figuring it out for us.
+        """
         try:
             wrd = soup.find("table", {"class": "WRD"})
             fr_wrd = wrd.find("tr", {"class": "even"}).find("td", {"class": "FrWrd"})  # type: ignore
-            return fr_wrd.strong.text.split()[0]  # type: ignore
+            return fr_wrd.strong.text.split()[0].strip(",")  # type: ignore
         except Exception as e:
-            raise e
+            logger.warning(f"Could not find the accented version of {self.word}")
+            if self.word is None:
+                raise RabotError from e
+            return self.word
 
     def try_fetch_word(self, res: Any, entry: Entry) -> None:
         # TODO: Make this return a dict instead of mutating entry.

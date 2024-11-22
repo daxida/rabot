@@ -52,45 +52,43 @@ def get_language_code(language: str) -> str:
             raise NotImplementedError(f"Language {language} is not supported")
 
 
-def greeklish_to_greek_characters(word: str) -> str:
+def greeklish_to_greek(word: str) -> str:
+    """Convert greeklish to greek.
+
+    In case of an already greek word, return it unchanged.
+    """
     return word.lower().translate(GREEKLISH)
 
 
 def fix_greek_spelling(word: str) -> str:
-    """Snippet from the wordref script that requests WordReference to get
+    """Fix the spelling of a word.
+
+    Snippet from the wordref script that requests WordReference to get
     the greek accented version of a given word (which can be greeklish
     or a non-accented greek word).
+    It can not be imported from the wordref due to circular import.
 
     Examples:
         * fix_greek_spelling("xara")     => χαρά
         * fix_greek_spelling("χαρα")     => χαρά
         * fix_greek_spelling("χαρά")     => χαρά
         * fix_greek_spelling("nonsense") => nonsense
-
     """
-    greek_word_no_accents = greeklish_to_greek_characters(word)
-    url = f"https://www.wordreference.com/gren/{greek_word_no_accents}"
+    greek_word = greeklish_to_greek(word)
+    url = f"https://www.wordreference.com/gren/{greek_word}"
     logger.debug(f"GET {url}")
     response = requests.get(url)
     response.raise_for_status()
     soup = BeautifulSoup(response.text, "html.parser")
 
-    # TODO: remove dedup (found in wordref::wordref)
     try:
-        word = (
-            soup.find("table", {"class": "WRD"})
-            .find("tr", {"class": "even"})
-            .find("td", {"class": "FrWrd"})
-            .strong.text.split()[0]
-        )
+        wrd = soup.find("table", {"class": "WRD"})
+        fr_wrd = wrd.find("tr", {"class": "even"}).find("td", {"class": "FrWrd"})  # type: ignore
+        accented_word = fr_wrd.strong.text.split()[0].strip(",")  # type: ignore
     except Exception:
-        pass
+        accented_word = word
 
-    # We have to trim in case of multiple comma separated words. For example:
-    # "https://www.wordreference.com/gren/αγαπώ" returns "αγαπάω," (from αγαπάω, αγαπώ)
-    word = word.strip(",")
-
-    return word
+    return accented_word
 
 
 # https://stackoverflow.com/questions/76247812/how-to-create-pagination-embed-menu-in-discord-py
