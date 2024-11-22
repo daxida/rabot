@@ -28,7 +28,8 @@ MONTHS_GENITIVE = [
 ]
 
 
-def get_full_date(dt: datetime = datetime.now()) -> str:
+def get_full_date(dt: datetime | None = None) -> str:
+    dt = dt or datetime.now()
     return f"{get_date(dt)} {get_hour(dt)}"
 
 

@@ -88,8 +88,8 @@ class Forvo:
         except HTTPError as e:
             logger.debug(f"[Forvo.py] HTTPError: {e}")
             if e.code == 404:
-                raise NotFoundError()
-            raise e
+                raise NotFoundError from e
+            raise RuntimeError(f"Failed to fetch page from Forvo: {e}") from e
 
     def get_pronunciations(self) -> None:
         """Populates self.pronunciations from the stored soup's."""
