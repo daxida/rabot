@@ -7,6 +7,7 @@ TODO: Unify the parsing.
 
 from __future__ import annotations
 
+import pprint
 from typing import Any
 
 import requests
@@ -15,8 +16,6 @@ from bs4 import BeautifulSoup
 from rabot.exceptions import RabotError
 from rabot.log import logger
 from rabot.utils import get_language_code
-
-DEFAULT_LANG = "greek"
 
 # fmt: off
 ENTRIES = [
@@ -39,29 +38,26 @@ ENTRIES_EN = [
 
 
 class WiktionaryQuery:
-    __slots__ = "language", "soup", "word"
+    __slots__ = "soup", "word"
 
     @classmethod
-    def create(cls, word: str, language: str, printable: bool = True) -> WiktionaryQuery:
-        # https://stackoverflow.com/questions/33128325/how-to-set-class-attribute-with-await-in-init
-        self = cls()
-        self.word = word
+    def create(cls, word: str, *, language: str = "el") -> WiktionaryQuery:
+        """Create a WiktionaryQuery object.
 
-        lcode = get_language_code(language)
-        # Not sure why we would want the printable version here.
-        base_url = f"https://{lcode}.wiktionary.org/wiki/{{}}"
-        if printable:
-            base_url += "?printable=yes"
+        For reference (obsolete since this does not use async anymore).
+        https://stackoverflow.com/questions/33128325/how-to-set-class-attribute-with-await-in-init
+        """
+        word = word.strip()
 
-        url = base_url.format(word)
+        lang = get_language_code(language)
+        url = f"https://{lang}.wiktionary.org/wiki/{word}"
         logger.debug(f"GET {url}")
-
         res = requests.get(url)
-        page_content = res.text
-
-        soup = BeautifulSoup(page_content, "html.parser")
+        soup = BeautifulSoup(res.text, "html.parser")
         WiktionaryQuery.remove_ancient_greek(soup, language)
 
+        self = cls()
+        self.word = word
         self.soup = soup
 
         return self
@@ -97,7 +93,7 @@ def fetch_conjugation(word: str) -> ConjugationDict:
 
     Retry with word variations by parsing wiktionary.
     """
-    query = WiktionaryQuery.create(word, DEFAULT_LANG, printable=False)
+    query = WiktionaryQuery.create(word)
     conjugation = _fetch_conjugation(query)
     if conjugation:
         logger.success(f"Fetched conjugation for {word}")
@@ -116,44 +112,22 @@ def _fetch_conjugation(query: WiktionaryQuery) -> ConjugationDict:
     valid_suggestions = list({*suggestions} - {query.word})
 
     for suggestion in valid_suggestions:
-        new_query = WiktionaryQuery.create(suggestion, DEFAULT_LANG, printable=False)
-        res = _parse_conjugation(new_query)
+        new_query = WiktionaryQuery.create(suggestion)
         # If we succeed with a suggestion, just return it,
         # even if it is potentially not the best?
+        res = _parse_conjugation(new_query)
         if res is not None:
             return res
 
 
 def parse_suggestions(query: WiktionaryQuery) -> list[str]:
-    """Generic helper to parse suggested words in case of failure."""
-    # TODO: merge li soups (needs further testing).
-    # FIXME: parses too many things
-    suggestions: list[str] = list()
+    """Parse suggested words in case of failure."""
+    suggestions: list[str] = []
 
-    # Search for deite (see also...) suggestions
-    deite = ["→ δείτε τη λέξη", "→\xa0δείτε\xa0τη\xa0λέξη"]
+    suggestions.extend(parse_deite_suggestions(query))
 
-    # cf: https://el.wiktionary.org/wiki/αγαπώ?printable=yes
-    res = query.soup.find_all("div", {"class": "NavContent"})
-    for div in res:
-        if any(d in div.text for d in deite):
-            links = div.find_all("a", title=True)
-            for link in links:
-                suggestions.append(link["title"])
-
-    # Sometimes deite suggestions are elsewhere.
-    # Here we search everything (even though we could potentially find
-    # an unwanted match somewhere?).
-    # cf: https://el.wiktionary.org/wiki/βρίσκομαι?printable=yes
-    res = query.soup.find_all("li")
-    for span in res:
-        if any(d in span.text for d in deite):
-            links = span.find_all("a", title=True)
-            for link in links:
-                suggestions.append(link["title"])
-
-    # Search for other verb forms
-    # cf: https://el.wiktionary.org/wiki/περπατώ?printable=yes
+    # Search for άλλη μορφή (other verb form...) suggestions.
+    # cf: https://el.wiktionary.org/wiki/περπατώ
     res = query.soup.find_all("li")
     for li in res:
         if "άλλη μορφή" in li.text:
@@ -164,6 +138,31 @@ def parse_suggestions(query: WiktionaryQuery) -> list[str]:
     if not suggestions:
         logger.warning(f"Found no suggestions for {query.word}.")
 
+    return suggestions
+
+
+def parse_deite_suggestions(query: WiktionaryQuery) -> list[str]:
+    """Search for deite (see also...) suggestions."""
+    suggestions: list[str] = []
+
+    deite = ["→ δείτε τη λέξη", "→\xa0δείτε\xa0τη\xa0λέξη"]
+
+    to_search = [
+        # cf: https://el.wiktionary.org/wiki/αγαπώ
+        ["div", {"class": "NavContent"}],
+        # Sometimes deite suggestions are elsewhere.
+        # Here we search every "li" (risky, we could add junk).
+        # cf: https://el.wiktionary.org/wiki/βρίσκομαι
+        #     In this case the suggestion is in the conjugation table.
+        ["li"],
+    ]
+
+    for search in to_search:  # pyright: ignore
+        for div in query.soup.find_all(search):
+            if any(d in div.text for d in deite):
+                links = div.find_all("a", title=True)
+                for link in links:
+                    suggestions.append(link["title"])
     return suggestions
 
 
@@ -336,28 +335,26 @@ def _parse_conjugation_table_two(query: WiktionaryQuery) -> dict[str, str] | Non
 
 
 def fetch_wiktionary_pos(word: str, language: str) -> dict[str, list[str]]:
-    query = WiktionaryQuery.create(word, language)
-    entries = parse_wiktionary_pos(query, language)
-    return entries
+    query = WiktionaryQuery.create(word, language=language)
+    return parse_wiktionary_pos(query, language)
 
 
 def parse_wiktionary_pos(query: WiktionaryQuery, language: str) -> dict[str, list[str]]:
-    entries = ENTRIES[:]
-    if language == "english":
-        entries = ENTRIES_EN[:]
+    """Parse parts of speech."""
+    entries = ENTRIES_EN[:] if language == "english" else ENTRIES[:]
+    pos: dict[str, list[str]] = dict()
 
-    parts_of_speech: dict[str, list[str]] = dict()
     for entry in entries:
         entry_elements = parse_entry(query, entry)
         if entry_elements is not None:
-            parts_of_speech[entry] = entry_elements
+            pos[entry] = entry_elements
 
-    return parts_of_speech
+    return pos
 
 
-def parse_entry(query: WiktionaryQuery, entry_type: str) -> list[str] | None:
+def parse_entry(query: WiktionaryQuery, entry_id: str) -> list[str] | None:
     # find position of page element with desired type
-    results = query.soup.find(["h3", "h4"], id=entry_type)
+    results = query.soup.find(["h3", "h4"], id=entry_id)
     if not results:
         return None
 
@@ -389,6 +386,6 @@ def parse_entry(query: WiktionaryQuery, entry_type: str) -> list[str] | None:
 
 
 if __name__ == "__main__":
-    # query = WiktionaryQuery.create("τρέχω", "el", False)
+    query = WiktionaryQuery.create("τρέχω", language="el")
     conj = fetch_conjugation("δημιουργώ")
-    print(conj)
+    pprint.pprint(conj, compact=True)
