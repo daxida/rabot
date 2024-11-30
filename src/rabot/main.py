@@ -53,7 +53,7 @@ async def templ_wordref(
     gr_en: bool,
     hide_words: bool,
     min_sentences_shown: int,
-    max_sentences_shown: int,
+    max_sentences_shown: int = 2,
 ) -> None:
     """Template for wordref commands."""
     wordref = Wordref(word, gr_en, hide_words, min_sentences_shown, max_sentences_shown)
@@ -104,22 +104,22 @@ async def wiktionarygr(inter: discord.Interaction, word: str, ephemeral: str = "
 
 @tree.command(name="wotdgr", description="Search a random Greek word in Wordref")
 async def wotdgr(inter: discord.Interaction) -> None:
-    await templ_wordref(inter, None, True, True, 1, 3)
+    await templ_wordref(inter, None, True, True, 1)
 
 
 @tree.command(name="wotden", description="Search a random english word in Wordref")
 async def wotden(inter: discord.Interaction) -> None:
-    await templ_wordref(inter, None, False, True, 1, 3)
+    await templ_wordref(inter, None, False, True, 1)
 
 
 @tree.command(name="searchgr", description="Search a Greek word in Wordref (supports greeklish)")
 async def searchgr(inter: discord.Interaction, word: str) -> None:
-    await templ_wordref(inter, word, True, False, 0, 2)
+    await templ_wordref(inter, word, True, False, 0)
 
 
 @tree.command(name="searchen", description="Search an English word in Wordref")
 async def searchen(inter: discord.Interaction, word: str) -> None:
-    await templ_wordref(inter, word, False, False, 0, 2)
+    await templ_wordref(inter, word, False, False, 0)
 
 
 @tree.command(name="date", description="Prompt date in Fidis format")

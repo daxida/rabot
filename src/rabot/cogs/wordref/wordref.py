@@ -5,7 +5,7 @@ import requests
 from bs4 import BeautifulSoup
 from discord import Embed
 
-from rabot.cogs.wordref.entry import Entry
+from rabot.cogs.wordref.entry import DictEntry, DictEntryItem, fmt_dict_entry
 from rabot.exceptions import RabotError
 from rabot.log import logger
 from rabot.utils import is_english
@@ -25,11 +25,12 @@ ATTRIBUTES_EL = {
     "ρ μ": "TODO",
     "έκφρ": "TODO",
     "περίφρ": "TODO",
+    "επίρ": "adverb",
 }
 ATTRIBUTES_EN = {
     "adj",
     "adv",
-    " n",
+    "n",
     "v expr",
     "vi",
     "vtr phrasal sep",
@@ -55,7 +56,9 @@ def parse_words(text: str) -> list[str]:
         if original_text == text:
             break
 
-    return text.split(", ")
+    words = [w for w in text.split(", ") if w]
+
+    return words
 
 
 class Wordref:
@@ -118,7 +121,6 @@ class Wordref:
 
         May fail (return None) if either:
         - The entry is not valid (based on our own set of conditions).
-        - The embed is not valid (based on length conditions).
         """
         entry = self.try_fetch_entry()
 
@@ -126,17 +128,17 @@ class Wordref:
             return None
 
         logger.success(f"Valid entry for '{self.word}'.")
-        entry.add_embed()
+        embed = fmt_dict_entry(
+            entry,
+            hide_words=self.hide_words,
+            max_sentences_shown=self.max_sentences_shown,
+        )
 
-        if not entry.is_valid_embed:
-            return None
+        return embed
 
-        logger.success(f"Valid embed for '{self.word}'.")
-        return entry.embed
-
-    def try_fetch_entry(self) -> Entry:
+    def try_fetch_entry(self) -> DictEntry:
         soup = self.get_soup()
-        if self.gr_en:
+        if self.gr_en or self.is_random:
             self.word = self.fetch_accented_word(soup)
         if self.word is None:
             raise RabotError("Not initialized word in Wordref")
@@ -144,19 +146,23 @@ class Wordref:
         new_url = f"{Wordref.BASE_URL}/gren/{self.word}"  # Forced "gren"
         logger.debug(f"URL {new_url}")
 
-        entry = Entry(
-            new_url,
+        all_wr_entries = []
+        for res in soup.find_all("table", {"class": "WRD"}):
+            wr_entries = self.fetch_wordref_entries(res)
+            # If opposite order, invert fr <=> to
+            if self.gr_en ^ (res["data-dict"] == "gren"):
+                for e in wr_entries:
+                    e.invert()
+            all_wr_entries.extend(wr_entries)
+
+        all_wr_entries = [wre for wre in all_wr_entries if wre.fr_exs and wre.to_exs]
+
+        entry = DictEntry(
             self.word,
             self.gr_en,
-            self.hide_words,
-            self.min_sentences_shown,
-            self.max_sentences_shown,
-            self.is_random,
+            new_url,
+            all_wr_entries,
         )
-
-        for res in soup.find_all("table", {"class": "WRD"}):
-            self.try_fetch_word(res, entry)
-            self.try_fetch_sentence_pairs(res, entry)
 
         return entry
 
@@ -175,101 +181,83 @@ class Wordref:
                 raise RabotError from e
             return self.word
 
-    def try_fetch_word(self, res: Any, entry: Entry) -> None:
-        # TODO: Make this return a dict instead of mutating entry.
-        for item in res.find_all("tr", {"class": ["even", "odd"]}):
-            fr_wrd = item.find("td", {"class": "FrWrd"})
-            to_wrd = item.find("td", {"class": "ToWrd"})
-
-            if not fr_wrd or not to_wrd:
-                continue
-
-            en_text = to_wrd.text
-            gr_text = fr_wrd.text
-
-            if is_english(fr_wrd.text):
-                en_text, gr_text = gr_text, en_text
-
-            if not entry.en_word:
-                entry.en_word = en_text.strip()
-
-            # Parts of speech
-            if (entry.gr_pos is None) and entry.gr_word:
-                if len(gr_text.split()) > 1 and entry.gr_word in gr_text:
-                    gr_pos = gr_text.replace(entry.gr_word, "").strip()
-                    entry.gr_pos = "" if "," in gr_pos else gr_pos
-
-            # Synonyms
-            for word in parse_words(gr_text):
-                entry.gr_synonyms.add(word)
-            for word in parse_words(en_text):
-                entry.en_synonyms.add(word)
-
-    def try_fetch_sentence_pairs(self, res: Any, entry: Entry) -> None:
-        """Options:
-        - (1) Stores every pair (even when there are
-             two translations to a sentence)
-        Ex.
-        (EN) The supposed masterpiece discovered in the old house was a fake.
-        (T1) Το υποτιθέμενο έργο τέχνης που βρέθηκε στο παλιό σπίτι ήταν πλαστό.
-        (T2) Το δήθεν έργο τέχνης που βρέθηκε στο παλιό σπίτι ήταν πλαστό.
-
-        - (2) Store only one pair giving priority to containing the original word.
+    def fetch_wordref_entries(self, res: Any) -> list[DictEntryItem]:
         """
-        gr_sentence = ""
-        en_sentence = ""
+        -------------------------------------------
+        Entry 1:
+        | Row 1   | tr class="odd"                |
+        | Row 2   | tr class="odd"                |
+        Entry 2:
+        -------------------------------------------
+        | Row 3   | tr class="even"               |
+        Entry 3:
+        -------------------------------------------
+        | Row 4   | tr class="odd"                |
+        | Row 5   | tr class="odd"                |
+        | Row 6   | tr class="odd"                |
+        Entry 4:
+        -------------------------------------------
+        | Row 7   | tr class="even"               |
+        | Row 8   | tr class="even"               |
+        -------------------------------------------
+        etc.
+        """
+        groups = []
+        cur_group = None
+        cur_class = None
 
-        for item in res.find_all("tr", {"class": ["even", "odd"]}):
-            fr_ex = item.find("td", {"class": "FrEx"})
-            to_ex = item.find("td", {"class": "ToEx"})
+        for row in res.find_all("tr", {"class": ["odd", "even"]}):
+            row_class = row["class"][0]
+            if row_class != cur_class:
+                if cur_group:
+                    groups.append(cur_group)
+                cur_group = BeautifulSoup("", "html.parser")
+                cur_class = row_class
+            cur_group.append(row)  # type: ignore
 
-            # Resets buffered sentences
-            if not fr_ex and not to_ex:
-                en_sentence = ""
-                gr_sentence = ""
+        if cur_group:
+            groups.append(cur_group)
 
-            # Buffers sentences to then group them in pairs
-            if fr_ex:
-                en_sentence = fr_ex.text
-            if to_ex:
-                gr_sentence = to_ex.text
-                # Delete "Translation not found" message
-                if "Αυτή η πρόταση δεν είναι μετάφραση της αγγλικής πρότασης." in gr_sentence:
-                    gr_sentence = ""
+        wr_entries = []
+        for group in groups:
+            fr_wrd_tag = group.find("td", {"class": "FrWrd"})
+            to_wrd_tag = group.find("td", {"class": "ToWrd"})
+            fr_wrds = []
+            to_wrds = []
+            for tag in fr_wrd_tag:
+                fr_wrds.extend(parse_words(tag.text))
+            for tag in to_wrd_tag:
+                to_wrds.extend(parse_words(tag.text))
 
-            # Groups them in pairs
-            if gr_sentence and en_sentence:
-                # Option 1
-                # entry.sentences.add((gr_sentence, en_sentence))
+            # Parsing POS requires to first scrape their abbreviation list.
+            # for word in to_wrds:
+            #     if self.word in word:
+            #         print(word)
 
-                # Option 2
-                stored_already = False
-                sentences = set(entry.sentences)
+            fr_exs = []
+            for item in group.find_all("td", {"class": "FrEx"}):
+                text = item.text.strip()
+                if "ⓘ" not in text:
+                    fr_exs.append(text)
+            to_exs = []
+            for item in group.find_all("td", {"class": "ToEx"}):
+                text = item.text.strip()
+                if "ⓘ" not in text:
+                    to_exs.append(text)
 
-                for stored_pair in sentences:
-                    stored_greek, stored_english = stored_pair
-                    if self.gr_en:
-                        if stored_english == en_sentence:
-                            stored_already = True
-                            # Our stored answer is already fine
-                            if self.word and self.word in stored_greek:
-                                break
-                            sentences.remove((stored_greek, stored_english))
-                            sentences.add((gr_sentence, en_sentence))
-                            break
-                    # We want our english sentences containing "word"
-                    elif stored_greek == gr_sentence:
-                        stored_already = True
-                        # Our stored answer is already fine
-                        if self.word and self.word in stored_english:
-                            break
-                        sentences.remove((stored_greek, stored_english))
-                        sentences.add((gr_sentence, en_sentence))
-                        break
-                if not stored_already:
-                    sentences.add((gr_sentence, en_sentence))
+            # If the pairs are not balanced, take the first choice.
+            #
+            # > I'm not sure what this thing is.   < this
+            # > Δεν ξέρω τι είναι αυτό το πράγμα.  < this
+            # > Δεν ξέρω τι είναι αυτό το πράμα.
+            min_size = min(len(fr_exs), len(to_exs))
+            fr_exs = fr_exs[:min_size]
+            to_exs = to_exs[:min_size]
 
-                entry.sentences.extend(list(sentences))
+            wr_entry = DictEntryItem(fr_wrds, to_wrds, fr_exs, to_exs)
+            wr_entries.append(wr_entry)
+
+        return wr_entries
 
 
 def main() -> None:
