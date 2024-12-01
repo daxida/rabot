@@ -1,6 +1,6 @@
 from datetime import datetime
 
-from rabot.cogs.gr_datetime.gr_date import get_date, get_full_date, get_hour
+from rabot.cogs.fun.gr_datetime.gr_date import get_date, get_full_date, get_hour
 
 
 def _test_date(dt: datetime, expected_d: str, expected_h: str) -> None:

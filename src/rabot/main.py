@@ -6,7 +6,8 @@ from dotenv import dotenv_values
 from requests.models import HTTPError
 
 from rabot.cogs.faqs.faqs import get_faq
-from rabot.cogs.gr_datetime.gr_date import get_full_date
+from rabot.cogs.fun.coptic import to_coptic
+from rabot.cogs.fun.gr_datetime.gr_date import get_full_date
 from rabot.cogs.pronunciation import pronunciation
 from rabot.cogs.wiktionary.embed_message import embed_message as wiktionary_message
 from rabot.cogs.wiktionary.wiktionary import fetch_conjugation
@@ -15,7 +16,8 @@ from rabot.exceptions import NotFoundError, RabotError
 from rabot.log import logger
 from rabot.utils import Pagination, fix_greek_spelling
 
-RABOT_CMD_RE = re.compile(r"^rabot\s*,?\s*(.*)\s*$")
+RABOT_CMD_RE = re.compile(r"^rabot\s*,?\s*(.*)\s*$", re.DOTALL)
+RABOCOP_CMD_RE = re.compile(r"^rabocop\s*,?\s*(.*)\s*$", re.DOTALL)
 
 
 class MyClient(discord.Client):
@@ -39,6 +41,15 @@ class MyClient(discord.Client):
             cmd = mtch.group(1)
             logger.debug(f"Rabot command: '{cmd}'")
             await message.channel.send(embed=get_faq(cmd))
+
+        if mtch := RABOCOP_CMD_RE.match(message.content):
+            cmd = mtch.group(1)
+            permissions = message.channel.permissions_for(message.author)
+            if permissions.manage_messages:
+                await message.delete()
+            else:
+                logger.warning("Bot lacks permission to delete messages.")
+            await message.channel.send(to_coptic(cmd))
 
 
 intents = discord.Intents.default()
