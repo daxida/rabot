@@ -27,6 +27,31 @@ Available commands are:
 `rabot, explain language transfer`
 """,
     },
+    "final ni": {
+        "alias": [
+            "fn",
+            "final n",
+            "final -n",
+            "τελικό ν",
+            "τελικό -ν",
+        ],
+        "author": "me",
+        "title": "Final -ν ~ Τελικό -ν",
+        "description": """
+The final **-ν** in certain words is sometimes retained and sometimes dropped, depending on the next word:
+
+- It can only drop from the article **την**, the 3rd person pronoun **αυτήν**, **την** and the particles **δεν** and **μην**
+- It never drops before a **vowel** or **κ, π, τ, μπ, ντ, γκ, ξ, ψ**
+  > _τη**ν** είδα, τη**ν** κοπέλα, τη**ν** ντουλάπα, δε**ν** ξέρω_
+- And it drops in the remaining cases:
+  > _τη δασκάλα, τη θυμήθηκα, δε θέλω_
+- In other words, it never drops:
+  > _το**ν** νέο (άντρα) **αλλά** το νέο (είδηση)_
+  > _ένα**ν** νέο (άντρα) **αλλά** ένα νέο (είδηση)_
+  > _τω**ν** θαλασσών, αυτό**ν** θέλει, το**ν** φώναξε, σα**ν** λύκος_
+[Explanation in Greek](http://ebooks.edu.gr/ebooks/v/html/8547/2009/Grammatiki_E-ST-Dimotikou_html-apli/index_B4e.html)
+""",
+    },
     "language transfer": {
         "alias": [
             "lt",
