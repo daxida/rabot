@@ -88,21 +88,21 @@ VERB_VOICES = ("Ενεργητική φωνή", "Παθητική φωνή")
 ConjugationDict = dict[str, dict[str, list[str]]] | None
 
 
-def fetch_conjugation(word: str) -> ConjugationDict:
+def fetch_conjugation(word: str, *, n_retries: int = 3) -> ConjugationDict:
     """Fetch the verb conjugation table.
 
     Retry with word variations by parsing wiktionary.
     """
     query = WiktionaryQuery.create(word)
-    conjugation = _fetch_conjugation(query)
+    conjugation = _fetch_conjugation(query, n_retries)
     if conjugation:
         logger.success(f"Fetched conjugation for {word}")
     else:
-        logger.warning(f"Failed fetching conjugation for {word}")
+        logger.warning(f"Failed fetching conjugation for {word} after {n_retries} retries.")
     return conjugation
 
 
-def _fetch_conjugation(query: WiktionaryQuery) -> ConjugationDict:
+def _fetch_conjugation(query: WiktionaryQuery, n_retries: int) -> ConjugationDict:
     res = _parse_conjugation(query)
     if res is not None:
         return res
@@ -111,7 +111,9 @@ def _fetch_conjugation(query: WiktionaryQuery) -> ConjugationDict:
     logger.debug(f"Trying suggestions. Found {len(suggestions)}.")
     valid_suggestions = list({*suggestions} - {query.word})
 
-    for suggestion in valid_suggestions:
+    for idx, suggestion in enumerate(valid_suggestions):
+        if idx > n_retries:
+            return None
         new_query = WiktionaryQuery.create(suggestion)
         # If we succeed with a suggestion, just return it,
         # even if it is potentially not the best?
@@ -123,7 +125,6 @@ def _fetch_conjugation(query: WiktionaryQuery) -> ConjugationDict:
 def parse_suggestions(query: WiktionaryQuery) -> list[str]:
     """Parse suggested words in case of failure."""
     suggestions: list[str] = []
-
     suggestions.extend(parse_deite_suggestions(query))
 
     # Search for άλλη μορφή (other verb form...) suggestions.
@@ -132,8 +133,7 @@ def parse_suggestions(query: WiktionaryQuery) -> list[str]:
     for li in res:
         if "άλλη μορφή" in li.text:
             links = li.find_all("a", title=True)
-            for link in links:
-                suggestions.append(link["title"])
+            suggestions.extend([link["title"] for link in links])
 
     if not suggestions:
         logger.warning(f"Found no suggestions for {query.word}.")
@@ -142,11 +142,15 @@ def parse_suggestions(query: WiktionaryQuery) -> list[str]:
 
 
 def parse_deite_suggestions(query: WiktionaryQuery) -> list[str]:
-    """Search for deite (see also...) suggestions."""
+    """Search for deite (see also...) suggestions.
+
+    This can fail horrendously and treat as suggestions the whole page
+    if there is a δείτε in an unexpected place.
+    cf. https://el.wiktionary.org/wiki/βρέχω
+    """
     suggestions: list[str] = []
 
     deite = ["→ δείτε τη λέξη", "→\xa0δείτε\xa0τη\xa0λέξη"]
-
     to_search = [
         # cf: https://el.wiktionary.org/wiki/αγαπώ
         ["div", {"class": "NavContent"}],
@@ -161,8 +165,10 @@ def parse_deite_suggestions(query: WiktionaryQuery) -> list[str]:
         for div in query.soup.find_all(search):
             if any(d in div.text for d in deite):
                 links = div.find_all("a", title=True)
-                for link in links:
-                    suggestions.append(link["title"])
+                suggestions.extend([link["title"] for link in links])
+
+    logger.trace(f"Found {len(suggestions)} deite suggestions.")
+
     return suggestions
 
 
@@ -177,7 +183,7 @@ def _parse_conjugation(query: WiktionaryQuery) -> ConjugationDict:
     # Note that the header being present does not guarantee a valid conjugation table.
     # cf. https://el.wiktionary.org/wiki/βρέχω?printable=yes
     if query.soup.find("h4", {"id": "Κλίση"}) is None:
-        logger.trace(f"{query.word} has no conjugation table.")
+        logger.trace(f"Failed fetch: {query.word} has no conjugation table.")
         return None
 
     parsed_conjugations = _parse_conjugation_table_one(query) or _parse_conjugation_table_two(query)
@@ -279,7 +285,7 @@ def _parse_conjugation_table_two(query: WiktionaryQuery) -> ConjugationDict:
     """
     # TODO: make this consistent with conj table one!
 
-    logger.info("Trying to fetch table structure two.")
+    logger.debug("Trying to fetch table structure two.")
 
     main_content = query.soup.find("div", {"class": "mw-content-ltr mw-parser-output"})
     if main_content is None:
@@ -313,7 +319,7 @@ def _parse_conjugation_table_two(query: WiktionaryQuery) -> ConjugationDict:
                 voice_data.append(row_data)
 
     if not voice_data:
-        logger.info("No data. No table contained verb information.")
+        logger.warning("No data. No table contained verb information.")
         return None
 
     # TODO: add this in the other function
@@ -365,9 +371,7 @@ def parse_entry(query: WiktionaryQuery, entry_id: str) -> list[str] | None:
     if next_element and next_element.name == "div":
         list_element = next_element.find_all("li")
         if list_element:
-            for element in list_element:
-                # add to the entry list
-                entry_elements.append(element.text)
+            entry_elements.extend([elmt.text for elmt in list_element])
     else:
         # these element types denote new entries so they terminate the loop
         while next_element and next_element.name not in ["h3", "h4", "h5", "div"]:
@@ -375,11 +379,9 @@ def parse_entry(query: WiktionaryQuery, entry_id: str) -> list[str] | None:
             # if only one instance of entry (e.g. only one definition)
             if not list_element:
                 entry_elements.append(next_element.text)
-                next_element = next_element.find_next_sibling()
             else:
-                for element in list_element:
-                    entry_elements.append(element.text)
-                next_element = next_element.find_next_sibling()
+                entry_elements.extend([elmt.text for elmt in list_element])
+            next_element = next_element.find_next_sibling()
 
     return entry_elements
 

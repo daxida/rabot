@@ -42,6 +42,7 @@ select = [
     "F",    # Pyflakes rules
     "ANN",
     "B",
+    "PERF",
 ]
 ignore = [
     "ANN401",
