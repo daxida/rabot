@@ -29,7 +29,7 @@ class MyClient(discord.Client):
     @staticmethod
     async def try_delete_starting_message(message: discord.Message) -> None:
         """Try to delete the message that prompted a command."""
-        permissions = message.channel.permissions_for(message.author)
+        permissions = message.channel.permissions_for(message.author)  # type: ignore
         if permissions.manage_messages:
             await message.delete()
         else:
@@ -63,13 +63,13 @@ tree = app_commands.CommandTree(client)
 async def templ_wordref(
     inter: discord.Interaction,
     word: str | None,
+    *,
     gr_en: bool,
-    hide_words: bool,
-    min_sentences_shown: int,
-    max_sentences_shown: int = 2,
+    hide_words: bool = False,
+    sentence_range: tuple[int, int] = (0, 2),
 ) -> None:
     """Template for wordref commands."""
-    wordref = Wordref(word, gr_en, hide_words, min_sentences_shown, max_sentences_shown)
+    wordref = Wordref(word, gr_en=gr_en, hide_words=hide_words, sentence_range=sentence_range)
     wordref_embed = wordref.fetch_embed()
 
     # In case of failure, try again once with fixed spelling.
@@ -77,7 +77,7 @@ async def templ_wordref(
         original_word = word
         word = fix_greek_spelling(word)
         logger.info(f"Tried to fix spelling: '{original_word}' to '{word}'")
-        wordref = Wordref(word, gr_en, hide_words, min_sentences_shown, max_sentences_shown)
+        wordref = Wordref(word, gr_en=gr_en, hide_words=hide_words, sentence_range=sentence_range)
         wordref_embed = wordref.fetch_embed()
 
     if wordref_embed is None:
@@ -117,22 +117,22 @@ async def wiktionarygr(inter: discord.Interaction, word: str, ephemeral: str = "
 
 @tree.command(name="wotdgr", description="Search a random Greek word in Wordref")
 async def wotdgr(inter: discord.Interaction) -> None:
-    await templ_wordref(inter, None, True, True, 1)
+    await templ_wordref(inter, None, gr_en=True, hide_words=True, sentence_range=(1, 2))
 
 
 @tree.command(name="wotden", description="Search a random english word in Wordref")
 async def wotden(inter: discord.Interaction) -> None:
-    await templ_wordref(inter, None, False, True, 1)
+    await templ_wordref(inter, None, gr_en=False, hide_words=True, sentence_range=(1, 2))
 
 
 @tree.command(name="searchgr", description="Search a Greek word in Wordref (supports greeklish)")
 async def searchgr(inter: discord.Interaction, word: str) -> None:
-    await templ_wordref(inter, word, True, False, 0)
+    await templ_wordref(inter, word, gr_en=True)
 
 
 @tree.command(name="searchen", description="Search an English word in Wordref")
 async def searchen(inter: discord.Interaction, word: str) -> None:
-    await templ_wordref(inter, word, False, False, 0)
+    await templ_wordref(inter, word, gr_en=False)
 
 
 @tree.command(name="date", description="Prompt date in Fidis format")

@@ -43,6 +43,7 @@ select = [
     "ANN",
     "B",
     "PERF",
+    "FBT",
 ]
 ignore = [
     "ANN401",

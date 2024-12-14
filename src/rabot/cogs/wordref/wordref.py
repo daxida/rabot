@@ -30,7 +30,7 @@ ATTRIBUTES_EL = {
 ATTRIBUTES_EN = {
     "adj",
     "adv",
-    "n",
+    "n",  # FIX: this will strip the final n of english lemmas: /searchgr εξωγήινος
     "v expr",
     "vi",
     "vtr phrasal sep",
@@ -72,10 +72,10 @@ class Wordref:
     def __init__(
         self,
         word: str | None,
+        *,
         gr_en: bool,
-        hide_words: bool,
-        min_sentences_shown: int,
-        max_sentences_shown: int,
+        hide_words: bool = False,
+        sentence_range: tuple[int, int] = (0, 2),
     ) -> None:
         if word is None:
             self.word = None
@@ -91,8 +91,7 @@ class Wordref:
 
         self.gr_en = gr_en
         self.hide_words = hide_words
-        self.min_sentences_shown = min_sentences_shown
-        self.max_sentences_shown = max_sentences_shown
+        self.min_sentences_shown, self.max_sentences_shown = sentence_range
 
         self.max_random_iterations = 5
 
