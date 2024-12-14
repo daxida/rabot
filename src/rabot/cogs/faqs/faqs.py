@@ -1,5 +1,22 @@
-from discord import Embed
+import re
+from dataclasses import dataclass
 
+import discord
+
+from rabot.cogs.fun.coptic import to_coptic
+
+RABOT_CMD_RE = re.compile(r"^rabot\s*,?\s*(.*)\s*$", re.DOTALL)
+RABOCOP_CMD_RE = re.compile(r"^rabocop\s*,?\s*(.*)\s*$", re.DOTALL)
+ERROR_RE = re.compile(r"^.*((τι|Τι) είναι η διαφορά).*$", re.DOTALL)
+
+
+@dataclass
+class MessageResponse:
+    content: discord.Embed | str
+    delete_starting_message: bool = False
+
+
+# TODO: use a json
 FAQS = {
     "default": {
         "alias": [],
@@ -59,14 +76,41 @@ def faq_footer(author: str) -> str:
     return f"{attribution}Type 'rabot' for the full FAQ list."
 
 
-def to_embed(faq: dict[str, str]) -> Embed:
-    embed = Embed(title=faq["title"], description=faq["description"], color=0x3392FF)
+def to_embed(faq: dict[str, str]) -> discord.Embed:
+    embed = discord.Embed(title=faq["title"], description=faq["description"], color=0x3392FF)
     embed.set_footer(text=faq_footer(faq["author"]))
     return embed
 
 
-def get_faq(cmd: str) -> Embed:
+def get_faq(cmd: str) -> discord.Embed:
     for faq_name, info in FAQS.items():
         if cmd in [faq_name] + info["alias"]:
             return to_embed(info)
     return to_embed(FAQS["default"])
+
+
+def report_error(msg: str) -> str | None:
+    """Detect Greek spelling / grammar errors. WIP"""
+    if m := ERROR_RE.match(msg):
+        is_capitalized = m.group(1)[0].isupper()
+
+        report = "✏️\n"
+        report += f"❌ {m.group(1).replace(m.group(2), f'**{m.group(2)}**')}\n"
+        report += f"✅ {'Π' if is_capitalized else 'π'}οια είναι η διαφορά\n"
+        return report
+
+
+def handle_message(message: discord.Message) -> MessageResponse | None:
+    # Faq commands
+    if mtch := RABOT_CMD_RE.match(message.content):
+        cmd = mtch.group(1)
+        return MessageResponse(get_faq(cmd))
+
+    # Coptic
+    if mtch := RABOCOP_CMD_RE.match(message.content):
+        cmd = mtch.group(1)
+        return MessageResponse(to_coptic(cmd), delete_starting_message=True)
+
+    # (WIP) Detect errors
+    # if err := report_error(message.content):
+    #     return MessageResponse(err)

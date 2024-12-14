@@ -1,12 +1,9 @@
-import re
-
 import discord
 from discord import app_commands
 from dotenv import dotenv_values
 from requests.models import HTTPError
 
-from rabot.cogs.faqs.faqs import get_faq
-from rabot.cogs.fun.coptic import to_coptic
+from rabot.cogs.faqs.faqs import handle_message
 from rabot.cogs.fun.gr_datetime.gr_date import get_full_date
 from rabot.cogs.pronunciation import pronunciation
 from rabot.cogs.wiktionary.embed_message import embed_message as wiktionary_message
@@ -15,9 +12,6 @@ from rabot.cogs.wordref.wordref import Wordref
 from rabot.exceptions import NotFoundError, RabotError
 from rabot.log import logger
 from rabot.utils import Pagination, fix_greek_spelling
-
-RABOT_CMD_RE = re.compile(r"^rabot\s*,?\s*(.*)\s*$", re.DOTALL)
-RABOCOP_CMD_RE = re.compile(r"^rabocop\s*,?\s*(.*)\s*$", re.DOTALL)
 
 
 class MyClient(discord.Client):
@@ -32,24 +26,32 @@ class MyClient(discord.Client):
             self.synced = True
         logger.success(f"Bot is ready! {self.user}")
 
+    @staticmethod
+    async def try_delete_starting_message(message: discord.Message) -> None:
+        """Try to delete the message that prompted a command."""
+        permissions = message.channel.permissions_for(message.author)
+        if permissions.manage_messages:
+            await message.delete()
+        else:
+            logger.warning("Bot lacks permission to delete messages.")
+
     async def on_message(self, message: discord.Message) -> None:
         if message.author == self.user:
             return
 
-        # Faq commands
-        if mtch := RABOT_CMD_RE.match(message.content):
-            cmd = mtch.group(1)
-            logger.debug(f"Rabot command: '{cmd}'")
-            await message.channel.send(embed=get_faq(cmd))
+        response = handle_message(message)
+        if response is None:
+            return
 
-        if mtch := RABOCOP_CMD_RE.match(message.content):
-            cmd = mtch.group(1)
-            permissions = message.channel.permissions_for(message.author)
-            if permissions.manage_messages:
-                await message.delete()
-            else:
-                logger.warning("Bot lacks permission to delete messages.")
-            await message.channel.send(to_coptic(cmd))
+        if isinstance(response.content, str):
+            await message.channel.send(response.content)
+        elif isinstance(response.content, discord.Embed):
+            await message.channel.send(embed=response.content)
+        else:
+            raise NotImplementedError
+
+        if response.delete_starting_message:
+            await MyClient.try_delete_starting_message(message)
 
 
 intents = discord.Intents.default()
