@@ -88,7 +88,7 @@ VERB_VOICES = ("Ενεργητική φωνή", "Παθητική φωνή")
 ConjugationDict = dict[str, dict[str, list[str]]] | None
 
 
-def fetch_conjugation(word: str, *, n_retries: int = 3) -> ConjugationDict:
+def fetch_conjugation(word: str, *, n_retries: int = 5) -> ConjugationDict:
     """Fetch the verb conjugation table.
 
     Retry with word variations by parsing wiktionary.
